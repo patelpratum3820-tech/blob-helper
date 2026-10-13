@@ -9,8 +9,10 @@ if sys.stderr is None:
 
 import json
 import random
+import time
 import io
 import wave
+import difflib
 import webbrowser
 import pyautogui
 import pyperclip
@@ -20,11 +22,63 @@ import speech_recognition as sr
 import pyttsx3
 
 from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, pyqtSignal, QUrl
-from PyQt6.QtGui import QColor, QFont, QIcon
+from PyQt6.QtGui import QColor, QFont
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton
 )
 from PyQt6.QtWebEngineWidgets import QWebEngineView
+
+
+# ----------------- Intelligent Typo & Spell Corrector -----------------
+APP_DICTIONARY = {
+    "camera": ["camera", "camara", "camer", "camra", "webcam", "video", "cam"],
+    "notepad": ["notepad", "notepd", "notpad", "notepade", "notes", "text editor"],
+    "calc": ["calculator", "calcolator", "calcualtor", "calc", "clac", "calculate"],
+    "explorer": ["explorer", "explor", "files", "folder", "my pc", "this pc"],
+    "paint": ["paint", "pant", "draw", "mspaint"],
+    "settings": ["settings", "settngs", "setting", "config", "control panel"],
+    "cmd": ["cmd", "terminal", "command prompt", "console", "powershell"],
+    "chrome": ["chrome", "croem", "chrom", "browser", "internet", "google"],
+    "antigravity": ["antigravity", "gravity", "anti gravity", "google gravity"]
+}
+
+VERB_DICTIONARY = {
+    "open": ["open", "opn", "oen", "launch", "start", "run", "sho", "show"]
+}
+
+def auto_correct_command(text: str) -> str:
+    """Intelligently detects spelling mistakes like 'oen camara' and fixes them to 'open camera'."""
+    tokens = text.lower().strip().split()
+    if not tokens:
+        return text
+
+    corrected_tokens = []
+    for token in tokens:
+        matched = False
+        # 1. Check action verbs
+        for standard_verb, variants in VERB_DICTIONARY.items():
+            matches = difflib.get_close_matches(token, variants, n=1, cutoff=0.68)
+            if matches or token in variants:
+                corrected_tokens.append(standard_verb)
+                matched = True
+                break
+        if matched:
+            continue
+
+        # 2. Check app/target names
+        for standard_app, variants in APP_DICTIONARY.items():
+            matches = difflib.get_close_matches(token, variants, n=1, cutoff=0.68)
+            if matches or token in variants:
+                corrected_tokens.append(standard_app)
+                matched = True
+                break
+        if matched:
+            continue
+
+        # Keep original token if no close dictionary match
+        corrected_tokens.append(token)
+
+    return " ".join(corrected_tokens)
 
 
 # ----------------- Worker Thread for Ollama -----------------
@@ -34,22 +88,27 @@ class AIWorker(QThread):
 
     def __init__(self, user_text):
         super().__init__()
-        self.user_text = user_text
+        # Pre-clean typos before sending to AI
+        self.user_text = auto_correct_command(user_text)
 
     def run(self):
-        prompt = f"""You are a cute and smart desktop assistant blob named Blob.
+        prompt = f"""You are a cute, intelligent desktop assistant blob named Blob.
 Analyze the user command and return ONLY a valid JSON object matching this schema:
 {{
   "action": "open_url" | "open_app" | "type_text" | "chat",
   "payload": "<url, app name, text to type, or response>",
-  "emotion": "happy" | "thinking" | "typing" | "surprised",
+  "emotion": "happy" | "thinking" | "typing" | "angry" | "love" | "cry" | "scared",
   "speech": "<short cute phrase under 6 words>"
 }}
 
-Rules:
+CRITICAL RULES:
+- Auto-correct any spelling mistakes, phonetic words, or speech-to-text typos (e.g. "oen camara" or "camara" -> "camera", "calcolator" -> "calc", "notepd" -> "notepad").
+- Valid app names for payload: "camera", "calc", "notepad", "cmd", "explorer", "paint", "settings", "chrome".
 - If user wants antigravity: action is "open_url", payload is "https://mrdoob.com/projects/chromeexperiments/google-gravity/"
-- If user asks to open common apps (notepad, calculator, cmd, explorer): action is "open_app"
-- If user asks to write, type, or generate a prompt/email/code: action is "type_text", emotion is "typing"
+- If user asks to open common apps: action is "open_app"
+- If user asks to write/type text: action is "type_text", emotion is "typing"
+- If user expresses love/thanks: emotion is "love"
+- If user is upset: emotion is "cry" or "scared"
 - If user asks a general question: action is "chat", emotion is "happy"
 
 User input: "{self.user_text}"
@@ -104,7 +163,6 @@ class VoiceWorker(QThread):
             with sr.AudioFile(byte_io) as source:
                 audio = recognizer.record(source)
 
-            # High-accuracy online Google STT (0% CPU impact)
             text = recognizer.recognize_google(audio)
             self.text_ready.emit(text)
         except sr.UnknownValueError:
@@ -150,6 +208,7 @@ class CuteBlobWidget(QWidget):
 
         self.emotion = "idle"
         self.old_pos = None
+        self.last_move_time = None
         self.pending_payload = ""
         self.is_recording = False
 
@@ -158,7 +217,7 @@ class CuteBlobWidget(QWidget):
         main_layout.setContentsMargins(6, 6, 6, 10)
         main_layout.setSpacing(6)
 
-        # 1. 3D WebGL Viewport (Three.js jelly model with real-time physics)
+        # 1. 3D WebGL Viewport (Three.js jelly model with Newton's laws physics)
         self.web_view = QWebEngineView(self)
         self.web_view.page().setBackgroundColor(QColor(0, 0, 0, 0))
         self.web_view.setStyleSheet("background: transparent; border: none;")
@@ -203,7 +262,7 @@ class CuteBlobWidget(QWidget):
                 color: #1A202C;
             }
             QLineEdit:focus {
-                border: 2px solid #9F7AEA;
+                border: 2px solid #38BDF8;
             }
         """)
         self.input_field.returnPressed.connect(self.start_ai_task)
@@ -222,7 +281,7 @@ class CuteBlobWidget(QWidget):
             }
             QPushButton:hover {
                 background: #EDF2F7;
-                border: 2px solid #9F7AEA;
+                border: 2px solid #38BDF8;
             }
             QPushButton:pressed {
                 background: #E2E8F0;
@@ -247,25 +306,41 @@ class CuteBlobWidget(QWidget):
         self.set_emotion("idle")
         self.speech_lbl.setText("I'm ready! ✨")
 
-    # --- Mouse Dragging & Cursor Tracking in 3D ---
+    # --- Newton's Laws of Motion: Inertia & Elastic Spring Dragging ---
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.old_pos = event.globalPosition().toPoint()
-            self.web_view.page().runJavaScript("window.triggerJiggle(0.35);")
+            self.last_move_time = time.time()
+            self.web_view.page().runJavaScript("window.triggerPoke();")
 
     def mouseMoveEvent(self, event):
-        # Calculate normalized mouse coordinates for 3D eye tracking
+        current_pos = event.globalPosition().toPoint()
+        current_time = time.time()
+
+        if self.old_pos and self.last_move_time:
+            dt = max(0.001, current_time - self.last_move_time)
+            delta = current_pos - self.old_pos
+            # Calculate movement velocity (pixels / ms)
+            vx = (delta.x() / dt) / 80.0
+            vy = (delta.y() / dt) / 80.0
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+
+            # Newton's 1st Law (Inertia): Body leans & squishes opposite to velocity
+            self.web_view.page().runJavaScript(f"window.onWindowMove({vx:.2f}, {vy:.2f});")
+
+        self.old_pos = current_pos
+        self.last_move_time = current_time
+
+        # 3D Eye Tracking follows cursor
         norm_x = event.position().x() / self.width()
         norm_y = event.position().y() / self.height()
         self.web_view.page().runJavaScript(f"window.setMousePos({norm_x:.2f}, {norm_y:.2f});")
 
-        if self.old_pos:
-            delta = event.globalPosition().toPoint() - self.old_pos
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.old_pos = event.globalPosition().toPoint()
-
     def mouseReleaseEvent(self, event):
         self.old_pos = None
+        self.last_move_time = None
+        # Newton's 2nd & 3rd Law: Sudden stop transfers stored momentum into elastic spring rebound!
+        self.web_view.page().runJavaScript("window.onWindowStop();")
 
     # --- Voice-to-Chat (Microphone) ---
     def toggle_voice_record(self):
@@ -296,14 +371,15 @@ class CuteBlobWidget(QWidget):
 
     def on_voice_success(self, recognized_text):
         self.reset_mic_button()
-        self.input_field.setText(recognized_text)
-        self.speech_lbl.setText(f'Heard: "{recognized_text}"')
-        # Automatically process the voice command with Ollama
+        # Automatically correct any mishearings / typos
+        cleaned = auto_correct_command(recognized_text)
+        self.input_field.setText(cleaned)
+        self.speech_lbl.setText(f'Heard: "{cleaned}"')
         QTimer.singleShot(600, self.start_ai_task)
 
     def on_voice_error(self, err_msg):
         self.reset_mic_button()
-        self.set_emotion("surprised")
+        self.set_emotion("scared")
         self.speech_lbl.setText(err_msg)
         self.reset_timer.start(3500)
 
@@ -319,21 +395,23 @@ class CuteBlobWidget(QWidget):
             }
             QPushButton:hover {
                 background: #EDF2F7;
-                border: 2px solid #9F7AEA;
+                border: 2px solid #38BDF8;
             }
         """)
 
     # --- AI Processing ---
     def start_ai_task(self):
-        text = self.input_field.text().strip()
-        if not text:
+        raw_text = self.input_field.text().strip()
+        if not raw_text:
             return
 
+        # Auto-correct spelling mistakes before execution
+        corrected_text = auto_correct_command(raw_text)
         self.input_field.clear()
         self.set_emotion("thinking")
         self.speech_lbl.setText("Thinking... 💭")
 
-        self.worker = AIWorker(text)
+        self.worker = AIWorker(corrected_text)
         self.worker.finished.connect(self.on_ai_success)
         self.worker.error.connect(self.on_ai_error)
         self.worker.start()
@@ -357,17 +435,25 @@ class CuteBlobWidget(QWidget):
             webbrowser.open(payload)
             self.reset_timer.start(4500)
 
-        # 2. Launch Windows Application
+        # 2. Launch Windows Application (with Typo-tolerant Fallbacks)
         elif action == "open_app":
             app_name = payload.lower()
-            if "calc" in app_name:
+            if "camera" in app_name or "cam" in app_name:
+                os.system("start microsoft.windows.camera:")
+            elif "calc" in app_name:
                 os.system("start calc")
             elif "note" in app_name:
                 os.system("start notepad")
-            elif "cmd" in app_name:
+            elif "cmd" in app_name or "terminal" in app_name:
                 os.system("start cmd")
             elif "explorer" in app_name or "file" in app_name:
                 os.system("start explorer")
+            elif "paint" in app_name:
+                os.system("start mspaint")
+            elif "setting" in app_name:
+                os.system("start ms-settings:")
+            elif "chrom" in app_name:
+                os.system("start chrome")
             else:
                 os.system(f"start {app_name}")
             self.reset_timer.start(4500)
@@ -390,9 +476,8 @@ class CuteBlobWidget(QWidget):
         self.reset_timer.start(3500)
 
     def on_ai_error(self, err_msg):
-        self.set_emotion("surprised")
+        self.set_emotion("scared")
         self.speech_lbl.setText("Oops, error!")
-        print("AI Error:", err_msg)
         self.reset_timer.start(4000)
 
 

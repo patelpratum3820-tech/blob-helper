@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Blob 3D</title>
+  <title>Blob 3D Companion</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -30,270 +30,424 @@
   <div id="canvas-container"></div>
 
   <script>
-    // --- 3D Scene Initialization ---
+    // =========================================================================
+    // 3D SCENE & RENDERER SETUP
+    // =========================================================================
     const container = document.getElementById('canvas-container');
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.z = 6.2;
+
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 6.4);
 
     const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = false;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.15;
     container.appendChild(renderer.domElement);
 
-    // --- Lighting ---
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.9);
+    // =========================================================================
+    // LIGHTING SETUP (Soft Pixar-grade Studio Lighting)
+    // =========================================================================
+    const ambientLight = new THREE.AmbientLight(0xdbeafe, 0.9);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
     keyLight.position.set(4, 5, 5);
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0xd0bfff, 0.8);
-    rimLight.position.set(-4, -2, -3);
+    const rimLight = new THREE.DirectionalLight(0x93c5fd, 1.2);
+    rimLight.position.set(-5, 3, -4);
     scene.add(rimLight);
 
-    const fillLight = new THREE.PointLight(0xffffff, 0.6);
-    fillLight.position.set(0, 0, 4);
+    const fillLight = new THREE.PointLight(0x60a5fa, 0.8, 10);
+    fillLight.position.set(0, -2, 3);
     scene.add(fillLight);
 
-    // --- Color Themes per Emotion ---
-    const EMOTION_COLORS = {
-      idle:      { body: 0xc4b5fd, rim: 0xa78bfa, light: 0xddd6fe }, // Soft Lilac
-      thinking:  { body: 0xfcd34d, rim: 0xfbbf24, light: 0xfef08a }, // Golden Amber
-      happy:     { body: 0xf472b6, rim: 0xec4899, light: 0xfbcfe8 }, // Warm Rosy Pink
-      typing:    { body: 0x38bdf8, rim: 0x0284c7, light: 0xbae6fd }, // Cyan Blue
-      surprised: { body: 0x34d399, rim: 0x059669, light: 0xa7f3d0 }  // Fresh Mint
+    // Dynamic inner core light for internal tech glow
+    const corePointLight = new THREE.PointLight(0x38bdf8, 1.5, 5);
+    corePointLight.position.set(0, 0, 0);
+    scene.add(corePointLight);
+
+    // =========================================================================
+    // EMOTION COLOR PALETTES (Matching Reference Art)
+    // =========================================================================
+    const EMOTIONS = {
+      idle:     { body: 0xbfe3f7, core: 0x38bdf8, eyes: 0x38bdf8, rim: 0x93c5fd },
+      happy:    { body: 0xc7ecff, core: 0x00f0ff, eyes: 0x00f5ff, rim: 0xa5f3fc },
+      thinking: { body: 0xcbe8f7, core: 0xfacc15, eyes: 0x38bdf8, rim: 0xfde047 },
+      typing:   { body: 0xb9e6fe, core: 0x06b6d4, eyes: 0x22d3ee, rim: 0x67e8f9 },
+      angry:    { body: 0xf87171, core: 0xef4444, eyes: 0xffedd5, rim: 0xfca5a5 },
+      love:     { body: 0xfbcfe8, core: 0xf43f5e, eyes: 0x38bdf8, rim: 0xf472b6 },
+      cry:      { body: 0x93c5fd, core: 0x2563eb, eyes: 0x60a5fa, rim: 0x3b82f6 },
+      scared:   { body: 0xc7d2fe, core: 0x6366f1, eyes: 0x818cf8, rim: 0xa5b4fc }
     };
 
     let currentEmotion = "idle";
-    let targetColor = new THREE.Color(EMOTION_COLORS.idle.body);
-    let currentColor = new THREE.Color(EMOTION_COLORS.idle.body);
+    let targetBodyColor = new THREE.Color(EMOTIONS.idle.body);
+    let targetCoreColor = new THREE.Color(EMOTIONS.idle.core);
+    let targetEyeColor  = new THREE.Color(EMOTIONS.idle.eyes);
 
-    // --- Procedural 3D Blob Mesh ---
-    const sphereGeo = new THREE.SphereGeometry(1.45, 48, 48);
-    // Cache original vertex positions for shader-like deformation
-    const basePositions = sphereGeo.attributes.position.array.slice();
+    // Root model container for Newtonian inertia rotations
+    const blobRoot = new THREE.Group();
+    scene.add(blobRoot);
 
-    const bodyMaterial = new THREE.MeshPhysicalMaterial({
-      color: currentColor,
-      roughness: 0.18,
-      metalness: 0.05,
-      clearcoat: 0.7,
-      clearcoatRoughness: 0.15,
-      transmission: 0.1,
-      reflectivity: 0.9
+    // =========================================================================
+    // 1. INNER TECH CORE (Visible through Translucent Jelly Dome)
+    // =========================================================================
+    const coreGeo = new THREE.IcosahedronGeometry(0.95, 2);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: EMOTIONS.idle.core,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.22
     });
+    const innerCore = new THREE.Mesh(coreGeo, coreMat);
+    blobRoot.add(innerCore);
 
-    const blobMesh = new THREE.Mesh(sphereGeo, bodyMaterial);
-    scene.add(blobMesh);
+    // Inner glowing sphere
+    const glowSphereGeo = new THREE.SphereGeometry(0.65, 24, 24);
+    const glowSphereMat = new THREE.MeshBasicMaterial({
+      color: EMOTIONS.idle.core,
+      transparent: true,
+      opacity: 0.35
+    });
+    const glowCore = new THREE.Mesh(glowSphereGeo, glowSphereMat);
+    blobRoot.add(glowCore);
 
-    // --- Eyes Rig ---
-    const eyeGroup = new THREE.Group();
-    scene.add(eyeGroup);
+    // =========================================================================
+    // 2. TRANSLUCENT JELLY DOME (The Main Body)
+    // =========================================================================
+    const bodyGeo = new THREE.SphereGeometry(1.42, 64, 48);
+    const baseBodyPositions = bodyGeo.attributes.position.array.slice();
 
-    const eyeGeo = new THREE.SphereGeometry(0.24, 24, 24);
-    const pupilGeo = new THREE.SphereGeometry(0.12, 20, 20);
-    const glintGeo = new THREE.SphereGeometry(0.045, 12, 12);
+    const bodyMat = new THREE.MeshPhysicalMaterial({
+      color: EMOTIONS.idle.body,
+      roughness: 0.12,
+      metalness: 0.05,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.08,
+      transmission: 0.58,   // Glassy translucent jelly
+      ior: 1.34,
+      reflectivity: 0.85,
+      transparent: true,
+      opacity: 0.94
+    });
+    const bodyMesh = new THREE.Mesh(bodyGeo, bodyMat);
+    blobRoot.add(bodyMesh);
 
-    const eyeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.1 });
-    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x1e1b4b });
-    const glintMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    // =========================================================================
+    // 3. DARK VISOR MASK (Front Face Pill)
+    // =========================================================================
+    const visorGeo = new THREE.SphereGeometry(0.65, 32, 24);
+    visorGeo.scale(1.4, 0.72, 0.5);
+    const visorMat = new THREE.MeshStandardMaterial({
+      color: 0x08101e,     // Deep obsidian navy
+      roughness: 0.18,
+      metalness: 0.3
+    });
+    const visorMesh = new THREE.Mesh(visorGeo, visorMat);
+    visorMesh.position.set(0, 0.18, 1.14);
+    blobRoot.add(visorMesh);
 
-    function createEye(xOffset) {
-      const eyePivot = new THREE.Group();
-      eyePivot.position.set(xOffset, 0.22, 1.25);
+    // =========================================================================
+    // 4. GLOWING CYAN LED EYES (Morphable per Emotion)
+    // =========================================================================
+    const eyesGroup = new THREE.Group();
+    eyesGroup.position.set(0, 0.18, 1.38);
+    blobRoot.add(eyesGroup);
 
-      const white = new THREE.Mesh(eyeGeo, eyeMat);
-      eyePivot.add(white);
+    const eyeMat = new THREE.MeshBasicMaterial({ color: EMOTIONS.idle.eyes });
 
-      const pupil = new THREE.Mesh(pupilGeo, pupilMat);
-      pupil.position.set(0, 0, 0.16);
-      eyePivot.add(pupil);
+    // (A) Normal / Idle Rounded Pill Eyes
+    const normalEyeGeo = new THREE.SphereGeometry(0.14, 20, 20);
+    normalEyeGeo.scale(1.0, 1.3, 0.4);
+    const leftNormalEye = new THREE.Mesh(normalEyeGeo, eyeMat);
+    leftNormalEye.position.x = -0.36;
+    const rightNormalEye = new THREE.Mesh(normalEyeGeo, eyeMat);
+    rightNormalEye.position.x = 0.36;
+    const normalGroup = new THREE.Group();
+    normalGroup.add(leftNormalEye, rightNormalEye);
+    eyesGroup.add(normalGroup);
 
-      const glint = new THREE.Mesh(glintGeo, glintMat);
-      glint.position.set(0.04, 0.04, 0.25);
-      eyePivot.add(glint);
-
-      eyeGroup.add(eyePivot);
-      return { pivot: eyePivot, white, pupil, glint };
-    }
-
-    const leftEye = createEye(-0.48);
-    const rightEye = createEye(0.48);
-
-    // --- Blush Cheeks ---
-    const blushGeo = new THREE.SphereGeometry(0.16, 16, 16);
-    blushGeo.scale(1.2, 0.6, 0.4);
-    const blushMat = new THREE.MeshBasicMaterial({ color: 0xfb7185, transparent: true, opacity: 0.55 });
-
-    const leftBlush = new THREE.Mesh(blushGeo, blushMat);
-    leftBlush.position.set(-0.72, -0.05, 1.22);
-    scene.add(leftBlush);
-
-    const rightBlush = new THREE.Mesh(blushGeo, blushMat);
-    rightBlush.position.set(0.72, -0.05, 1.22);
-    scene.add(rightBlush);
-
-    // --- 3D Mouth Curve ---
-    const mouthCurve = new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(-0.20, -0.25, 1.34),
-      new THREE.Vector3(0, -0.42, 1.38),
-      new THREE.Vector3(0.20, -0.25, 1.34)
-    );
-    const mouthGeo = new THREE.TubeGeometry(mouthCurve, 16, 0.04, 8, false);
-    const mouthMat = new THREE.MeshBasicMaterial({ color: 0x1e1b4b });
-    const mouthMesh = new THREE.Mesh(mouthGeo, mouthMat);
-    scene.add(mouthMesh);
-
-    // --- Noise & Wobble Math Helpers ---
-    function pseudoNoise(x, y, z, t) {
-      return (
-        Math.sin(x * 2.2 + t * 2.0) * 0.35 +
-        Math.sin(y * 2.5 + t * 2.3) * 0.35 +
-        Math.sin(z * 2.1 + t * 1.8) * 0.30
+    // (B) Happy Curved Smile Eyes (^ ^)
+    function createArcEye() {
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(-0.16, -0.06, 0),
+        new THREE.Vector3(0, 0.10, 0),
+        new THREE.Vector3(0.16, -0.06, 0)
       );
+      return new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.038, 8, false), eyeMat);
     }
+    const leftHappyEye = createArcEye();
+    leftHappyEye.position.x = -0.36;
+    const rightHappyEye = createArcEye();
+    rightHappyEye.position.x = 0.36;
+    const happyGroup = new THREE.Group();
+    happyGroup.add(leftHappyEye, rightHappyEye);
+    happyGroup.visible = false;
+    eyesGroup.add(happyGroup);
 
-    // --- State Variables ---
+    // (C) Angry Angled Eyes (> <)
+    function createAngryEye(isRight) {
+      const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(isRight ? -0.15 : 0.15, 0.08, 0),
+        new THREE.Vector3(0, 0.0, 0),
+        new THREE.Vector3(isRight ? -0.15 : 0.15, -0.08, 0)
+      );
+      return new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.038, 8, false), eyeMat);
+    }
+    const leftAngryEye = createAngryEye(false);
+    leftAngryEye.position.x = -0.36;
+    const rightAngryEye = createAngryEye(true);
+    rightAngryEye.position.x = 0.36;
+    const angryGroup = new THREE.Group();
+    angryGroup.add(leftAngryEye, rightAngryEye);
+    angryGroup.visible = false;
+    eyesGroup.add(angryGroup);
+
+    // (D) Love Heart Eyes (♥ ♥)
+    function createHeartShape() {
+      const shape = new THREE.Shape();
+      const x = 0, y = 0;
+      shape.moveTo(x, y + 0.06);
+      shape.bezierCurveTo(x, y + 0.14, x - 0.12, y + 0.18, x - 0.12, y + 0.08);
+      shape.bezierCurveTo(x - 0.12, y, x, y - 0.12, x, y - 0.14);
+      shape.bezierCurveTo(x, y - 0.12, x + 0.12, y, x + 0.12, y + 0.08);
+      shape.bezierCurveTo(x + 0.12, y + 0.18, x, y + 0.14, x, y + 0.06);
+      const geom = new THREE.ShapeGeometry(shape);
+      return new THREE.Mesh(geom, eyeMat);
+    }
+    const leftHeart = createHeartShape();
+    leftHeart.position.x = -0.36;
+    const rightHeart = createHeartShape();
+    rightHeart.position.x = 0.36;
+    const loveGroup = new THREE.Group();
+    loveGroup.add(leftHeart, rightHeart);
+    loveGroup.visible = false;
+    eyesGroup.add(loveGroup);
+
+    // (E) Crying Digital Teardrops
+    const tearGeo = new THREE.CylinderGeometry(0.04, 0.04, 0.36, 12);
+    const tearMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.85 });
+    const leftTear = new THREE.Mesh(tearGeo, tearMat);
+    leftTear.position.set(-0.36, -0.15, 0.02);
+    const rightTear = new THREE.Mesh(tearGeo, tearMat);
+    rightTear.position.set(0.36, -0.15, 0.02);
+    const cryGroup = new THREE.Group();
+    cryGroup.add(leftTear, rightTear);
+    cryGroup.visible = false;
+    eyesGroup.add(cryGroup);
+
+    // =========================================================================
+    // 5. CUTE JELLY HANDS / NUBS (Posable per Emotion)
+    // =========================================================================
+    const armGeo = new THREE.SphereGeometry(0.26, 20, 20);
+    armGeo.scale(1.2, 0.8, 0.8);
+    const leftArm = new THREE.Mesh(armGeo, bodyMat);
+    const rightArm = new THREE.Mesh(armGeo, bodyMat);
+    blobRoot.add(leftArm, rightArm);
+
+    // Arm Target Positions
+    const ARM_POSES = {
+      idle:     { lx: -1.45, ly: -0.3, lz: 0.1,  rx: 1.45, ry: -0.3, rz: 0.1,  rotZ: 0.2 },
+      happy:    { lx: -1.35, ly: 0.75, lz: 0.2,  rx: 1.35, ry: 0.75, rz: 0.2,  rotZ: -1.1 }, // Arms in the air!
+      angry:    { lx: -1.20, ly: -0.45, lz: 0.3, rx: 1.20, ry: -0.45, rz: 0.3, rotZ: 0.5 },
+      typing:   { lx: -0.55, ly: -0.45, lz: 1.2, rx: 0.55, ry: -0.45, rz: 1.2, rotZ: 0.0 }, // Hands forward typing
+      love:     { lx: -0.28, ly: -0.25, lz: 1.2, rx: 0.28, ry: -0.25, rz: 1.2, rotZ: -0.4 }, // Clasped to chest
+      thinking: { lx: -1.35, ly: -0.3, lz: 0.1,  rx: 0.45, ry: -0.05, rz: 1.2, rotZ: 0.8 }, // Hand to chin
+      cry:      { lx: -0.45, ly: 0.12, lz: 1.15, rx: 0.45, ry: 0.12, rz: 1.15, rotZ: -0.8 }, // Covering eyes
+      scared:   { lx: -0.85, ly: -0.15, lz: 0.9, rx: 0.85, ry: -0.15, rz: 0.9, rotZ: -0.5 }
+    };
+
+    let currentArmPose = { ...ARM_POSES.idle };
+
+    // =========================================================================
+    // 6. NEWTONIAN PHYSICS & JIGGLE ENGINE (Inertia + Damped Spring Harmonic)
+    // =========================================================================
+    // Newton's 1st Law: Object at rest stays at rest unless moved.
+    // Newton's 2nd & 3rd Law: Force creates acceleration; stopping causes momentum rebound.
+    let velocityX = 0;
+    let velocityY = 0;
+    let lastWindowX = 0;
+    let lastWindowY = 0;
+
+    // Harmonic spring variables for realistic jelly rebound
+    let springDisplacementX = 0;
+    let springDisplacementY = 0;
+    let springVelocityX = 0;
+    let springVelocityY = 0;
+    const SPRING_STIFFNESS = 0.14;   // Hooke's constant k
+    const SPRING_DAMPING = 0.84;     // Damping factor (decays wobble smoothly)
+
+    let mouseNormX = 0;
+    let mouseNormY = 0;
     let time = 0;
     let blinkTimer = 0;
-    let isBlinking = false;
-    let eyeBlinkScale = 1.0;
-    let mouseX = 0;
-    let mouseY = 0;
-    let targetMouseX = 0;
-    let targetMouseY = 0;
-    let impulseWobble = 0.0;
+    let blinkScale = 1.0;
 
-    // --- External Interface Called by Python ---
+    // =========================================================================
+    // EXTERNAL API (Called by Python)
+    // =========================================================================
     window.setEmotion = function(emotion) {
       currentEmotion = emotion || "idle";
-      const config = EMOTION_COLORS[currentEmotion] || EMOTION_COLORS.idle;
-      targetColor.setHex(config.body);
-      impulseWobble = 0.35; // Trigger bounce on emotion shift
+      const theme = EMOTIONS[currentEmotion] || EMOTIONS.idle;
+      targetBodyColor.setHex(theme.body);
+      targetCoreColor.setHex(theme.core);
+      targetEyeColor.setHex(theme.eyes);
+
+      // Hide all eye groups
+      normalGroup.visible = false;
+      happyGroup.visible = false;
+      angryGroup.visible = false;
+      loveGroup.visible = false;
+      cryGroup.visible = false;
+
+      // Select active eye shape
+      if (currentEmotion === "happy") happyGroup.visible = true;
+      else if (currentEmotion === "angry") angryGroup.visible = true;
+      else if (currentEmotion === "love") loveGroup.visible = true;
+      else if (currentEmotion === "cry") { normalGroup.visible = true; cryGroup.visible = true; }
+      else normalGroup.visible = true;
+
+      // Update arm targets
+      currentArmPose = ARM_POSES[currentEmotion] || ARM_POSES.idle;
+
+      // Trigger a gentle elastic pulse on emotion change
+      springVelocityY += 0.25;
     };
 
-    window.setMousePos = function(normalizedX, normalizedY) {
-      targetMouseX = (normalizedX - 0.5) * 2;
-      targetMouseY = -(normalizedY - 0.5) * 2;
+    // Receive window movement velocity from Python (Newton's Laws)
+    window.onWindowMove = function(vx, vy) {
+      velocityX = vx;
+      velocityY = vy;
+      // Newton's 1st Law: Body squishes opposite to motion direction
+      springDisplacementX += -vx * 0.08;
+      springDisplacementY += -vy * 0.08;
     };
 
-    window.triggerJiggle = function(strength) {
-      impulseWobble = Math.min(1.0, (impulseWobble || 0) + (strength || 0.4));
+    // When window movement stops: inject stored momentum into spring rebound
+    window.onWindowStop = function() {
+      // Newton's 2nd & 3rd Law: Sudden stop transfers momentum into elastic spring oscillation
+      springVelocityX += velocityX * 0.35;
+      springVelocityY += velocityY * 0.35;
+      velocityX = 0;
+      velocityY = 0;
     };
 
-    // --- Animation Loop ---
+    window.setMousePos = function(nx, ny) {
+      mouseNormX = (nx - 0.5) * 2;
+      mouseNormY = -(ny - 0.5) * 2;
+    };
+
+    window.triggerPoke = function() {
+      springVelocityY -= 0.45;
+      springVelocityX += (Math.random() - 0.5) * 0.3;
+    };
+
+    // =========================================================================
+    // MAIN ANIMATION LOOP
+    // =========================================================================
     function animate() {
       requestAnimationFrame(animate);
       time += 0.024;
 
-      // Color transition
-      currentColor.lerp(targetColor, 0.08);
-      bodyMaterial.color.copy(currentColor);
+      // Smooth color transitions
+      bodyMat.color.lerp(targetBodyColor, 0.08);
+      coreMat.color.lerp(targetCoreColor, 0.08);
+      glowSphereMat.color.lerp(targetCoreColor, 0.08);
+      eyeMat.color.lerp(targetEyeColor, 0.1);
+      corePointLight.color.lerp(targetCoreColor, 0.08);
 
-      // Damp impulse wobble
-      impulseWobble *= 0.94;
+      // --- Damped Harmonic Spring Simulation (Newton's Laws Jiggle) ---
+      // F = -k * x
+      const springForceX = -SPRING_STIFFNESS * springDisplacementX;
+      const springForceY = -SPRING_STIFFNESS * springDisplacementY;
+      springVelocityX = (springVelocityX + springForceX) * SPRING_DAMPING;
+      springVelocityY = (springVelocityY + springForceY) * SPRING_DAMPING;
+      springDisplacementX += springVelocityX;
+      springDisplacementY += springVelocityY;
 
-      // Mouse tracking interpolation
-      mouseX += (targetMouseX - mouseX) * 0.1;
-      mouseY += (targetMouseY - mouseY) * 0.1;
+      // Calm breathing pulse when sitting still (no chaotic jiggle!)
+      const breathPulse = Math.sin(time * 2.0) * 0.025;
+      const idleFloatY = Math.sin(time * 1.5) * 0.06;
 
-      // --- Deform Body Vertices (Organic Jelly Physics) ---
-      const positions = sphereGeo.attributes.position.array;
-      const wobbleFreq = currentEmotion === "thinking" ? 3.5 : (currentEmotion === "happy" ? 4.0 : 2.0);
-      const wobbleAmp = 0.07 + impulseWobble * 0.14 + (currentEmotion === "thinking" ? 0.05 : 0.02);
+      // Combine spring inertia + squash
+      const totalSquashY = 1.0 + springDisplacementY + (currentEmotion === "scared" ? Math.sin(time * 30) * 0.03 : breathPulse);
+      const totalSquashX = 1.0 - springDisplacementY * 0.5 - breathPulse * 0.5;
 
-      // Vertical Squash & Stretch factor
-      let squashY = 1.0;
-      let squashXZ = 1.0;
-      if (currentEmotion === "happy") {
-        squashY = 1.0 + Math.sin(time * 6.0) * 0.12;
-        squashXZ = 1.0 - Math.sin(time * 6.0) * 0.06;
-      } else if (currentEmotion === "thinking") {
-        squashY = 1.05 + Math.sin(time * 2.0) * 0.04;
-        squashXZ = 0.96;
-      } else if (currentEmotion === "surprised") {
-        squashY = 1.15;
-        squashXZ = 0.90;
+      blobRoot.position.y = idleFloatY + springDisplacementY * 0.5;
+      blobRoot.rotation.z = -springDisplacementX * 0.4;
+      blobRoot.rotation.x = -springDisplacementY * 0.3;
+
+      // --- Organic Mesh Vertex Deformation ---
+      const pos = bodyGeo.attributes.position.array;
+      const wobble = (Math.abs(springDisplacementX) + Math.abs(springDisplacementY)) * 0.12;
+
+      for (let i = 0; i < pos.length; i += 3) {
+        const bx = baseBodyPositions[i];
+        const by = baseBodyPositions[i + 1];
+        const bz = baseBodyPositions[i + 2];
+
+        // Soft ripple only active during spring wobble
+        const ripple = wobble > 0.01 ? Math.sin(by * 3.0 + time * 8.0) * wobble : 0;
+        pos[i]     = bx * totalSquashX + ripple;
+        pos[i + 1] = by * totalSquashY;
+        pos[i + 2] = bz * totalSquashX + ripple;
       }
+      bodyGeo.attributes.position.needsUpdate = true;
+      bodyGeo.computeVertexNormals();
 
-      for (let i = 0; i < positions.length; i += 3) {
-        const bx = basePositions[i];
-        const by = basePositions[i + 1];
-        const bz = basePositions[i + 2];
+      // Rotate tech core slowly
+      innerCore.rotation.y += 0.01;
+      innerCore.rotation.x = Math.sin(time * 0.8) * 0.15;
 
-        const noise = pseudoNoise(bx, by, bz, time * wobbleFreq);
-        const disp = 1.0 + noise * wobbleAmp;
-
-        positions[i]     = bx * disp * squashXZ;
-        positions[i + 1] = by * disp * squashY;
-        positions[i + 2] = bz * disp * squashXZ;
-      }
-      sphereGeo.attributes.position.needsUpdate = true;
-      sphereGeo.computeVertexNormals();
-
-      // --- Floating & Idle Body Rotation ---
-      const idleFloatY = Math.sin(time * 1.8) * 0.08;
-      blobMesh.position.y = idleFloatY;
-      blobMesh.rotation.y = Math.sin(time * 0.8) * 0.08 + mouseX * 0.15;
-      blobMesh.rotation.x = -mouseY * 0.12;
-
-      // --- Natural Eye Blinking ---
+      // --- Eye Tracking & Natural Blinking ---
       blinkTimer += 1;
-      if (blinkTimer > 130) {
-        if (Math.random() < 0.04) {
-          isBlinking = true;
+      if (blinkTimer > 140) {
+        if (Math.random() < 0.05) {
+          blinkScale = 0.08;
           blinkTimer = 0;
         }
       }
-      if (isBlinking) {
-        eyeBlinkScale = THREE.MathUtils.lerp(eyeBlinkScale, 0.05, 0.4);
-        if (eyeBlinkScale < 0.08) isBlinking = false;
-      } else {
-        eyeBlinkScale = THREE.MathUtils.lerp(eyeBlinkScale, 1.0, 0.25);
-      }
+      blinkScale = THREE.MathUtils.lerp(blinkScale, 1.0, 0.25);
 
       // Eye look direction
-      let lookX = mouseX * 0.25;
-      let lookY = mouseY * 0.22;
+      let targetLookX = mouseNormX * 0.18;
+      let targetLookY = mouseNormY * 0.14;
       if (currentEmotion === "thinking") {
-        lookX = 0.22;
-        lookY = 0.28; // Look up thoughtfully
+        targetLookX = 0.18;
+        targetLookY = 0.22;
       } else if (currentEmotion === "typing") {
-        lookX = 0.0;
-        lookY = -0.22; // Look down at work
+        targetLookX = 0.0;
+        targetLookY = -0.18;
       }
 
-      leftEye.pivot.scale.y = eyeBlinkScale;
-      rightEye.pivot.scale.y = eyeBlinkScale;
-      leftEye.pivot.position.y = (0.22 + idleFloatY) * squashY;
-      rightEye.pivot.position.y = (0.22 + idleFloatY) * squashY;
+      eyesGroup.position.x = targetLookX;
+      eyesGroup.position.y = 0.18 + targetLookY;
+      eyesGroup.scale.y = blinkScale;
 
-      leftEye.pupil.position.x = lookX * 0.08;
-      leftEye.pupil.position.y = lookY * 0.08;
-      rightEye.pupil.position.x = lookX * 0.08;
-      rightEye.pupil.position.y = lookY * 0.08;
+      // --- Arm / Nub Interpolation ---
+      const pose = currentArmPose;
+      leftArm.position.x = THREE.MathUtils.lerp(leftArm.position.x, pose.lx, 0.12);
+      leftArm.position.y = THREE.MathUtils.lerp(leftArm.position.y, pose.ly + idleFloatY, 0.12);
+      leftArm.position.z = THREE.MathUtils.lerp(leftArm.position.z, pose.lz, 0.12);
+      leftArm.rotation.z = THREE.MathUtils.lerp(leftArm.rotation.z, -pose.rotZ, 0.12);
 
-      // Blush sync
-      leftBlush.position.y = (-0.05 + idleFloatY) * squashY;
-      rightBlush.position.y = (-0.05 + idleFloatY) * squashY;
+      rightArm.position.x = THREE.MathUtils.lerp(rightArm.position.x, pose.rx, 0.12);
+      rightArm.position.y = THREE.MathUtils.lerp(rightArm.position.y, pose.ry + idleFloatY, 0.12);
+      rightArm.position.z = THREE.MathUtils.lerp(rightArm.position.z, pose.rz, 0.12);
+      rightArm.rotation.z = THREE.MathUtils.lerp(rightArm.rotation.z, pose.rotZ, 0.12);
 
-      // Mouth position sync
-      mouthMesh.position.y = idleFloatY * squashY;
-      if (currentEmotion === "surprised") {
-        mouthMesh.scale.set(0.6, 1.6, 1.0);
-      } else if (currentEmotion === "happy") {
-        mouthMesh.scale.set(1.2, 1.3, 1.0);
-      } else {
-        mouthMesh.scale.set(1.0, 1.0, 1.0);
+      // Crying teardrop flow
+      if (currentEmotion === "cry") {
+        leftTear.position.y = -0.15 - ((time * 2.5) % 0.35);
+        rightTear.position.y = -0.15 - (((time + 0.15) * 2.5) % 0.35);
       }
 
       renderer.render(scene, camera);
     }
 
-    // Window Resize Handling
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
