@@ -1,9 +1,9 @@
 ================================================================================
-                    BLOB AI (JARVIS) - PROJECT VISION & EVOLUTION PLAN
+                    BLOB HELPER - PROJECT VISION & EVOLUTION PLAN
 ================================================================================
 
 1. VISION OF THIS PROJECT:
-   Blob AI is your living, floating 3D desktop companion ("Jarvis"). It stays 
+   Blob Helper is your living, floating 3D desktop companion ("Blob"). It stays 
    on top of your Windows screen without frames or borders, talks with personality,
    moves and expresses emotions in real-time 3D, and listens directly through an
    in-built microphone to execute actions or chat via local Ollama AI.
@@ -40,7 +40,7 @@
      * Python audio listener records speech directly from your microphone.
      * Speech-to-Text converts your voice into text automatically.
      * The prompt is sent straight to Ollama (qwen2.5:3b) without typing anything!
-     * Bonus: We can add Text-to-Speech (TTS) so Jarvis can speak back with a cute voice!
+     * Bonus: We can add Text-to-Speech (TTS) so Blob can speak back with a cute voice!
 
 [QUESTION 3]: How do I upload this project to GitHub with Ollama setup and model download?
 [ANSWER]: CRITICAL WARNING & EASY SOLUTION:

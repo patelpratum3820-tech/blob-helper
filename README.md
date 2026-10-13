@@ -1,6 +1,6 @@
-# 🫧 Blob AI (Jarvis) — 3D Desktop AI Companion
+# 🫧 Blob Helper — 3D Desktop AI Companion
 
-An interactive, animated 3D desktop companion powered by local AI (**Ollama**). Jarvis floats on your screen, listens via voice or text input, expresses emotions, and automates desktop tasks.
+An interactive, animated 3D desktop companion powered by local AI (**Ollama**). Blob floats on your screen, listens via voice or text input, expresses emotions, and automates desktop tasks.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![PyQt6](https://img.shields.io/badge/GUI-PyQt6-green.svg)
@@ -33,8 +33,8 @@ ollama run qwen2.5:3b
 ### 3. Clone & Install
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/blob-ai.git
-cd blob-ai
+git clone https://github.com/patelpratum3820-tech/blob-helper.git
+cd blob-helper
 
 # Install Python dependencies
 pip install -r requirements.txt

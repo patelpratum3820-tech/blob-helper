@@ -2,15 +2,23 @@ import sys
 import os
 import json
 import random
+import io
+import wave
 import webbrowser
 import pyautogui
 import pyperclip
 import ollama
-from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, pyqtSignal
-from PyQt6.QtGui import QPainter, QBrush, QColor, QPen
+import sounddevice as sd
+import speech_recognition as sr
+import pyttsx3
+
+from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, pyqtSignal, QUrl
+from PyQt6.QtGui import QColor, QFont, QIcon
 from PyQt6.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QLineEdit, QLabel
+    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QLabel, QPushButton
 )
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+
 
 # ----------------- Worker Thread for Ollama -----------------
 class AIWorker(QThread):
@@ -22,7 +30,7 @@ class AIWorker(QThread):
         self.user_text = user_text
 
     def run(self):
-        prompt = f"""You are a smart desktop assistant blob named Jarvis.
+        prompt = f"""You are a cute and smart desktop assistant blob named Blob.
 Analyze the user command and return ONLY a valid JSON object matching this schema:
 {{
   "action": "open_url" | "open_app" | "type_text" | "chat",
@@ -40,7 +48,6 @@ Rules:
 User input: "{self.user_text}"
 """
         try:
-            # Force JSON format so 3B model adheres strictly
             res = ollama.chat(
                 model='qwen2.5:3b',
                 format='json',
@@ -54,186 +61,197 @@ User input: "{self.user_text}"
             self.error.emit(str(e))
 
 
-# ----------------- Cute Blob Window -----------------
+# ----------------- Worker Thread for Voice Recording & STT -----------------
+class VoiceWorker(QThread):
+    text_ready = pyqtSignal(str)
+    error = pyqtSignal(str)
+    status_update = pyqtSignal(str)
+
+    def __init__(self, duration=4, samplerate=16000):
+        super().__init__()
+        self.duration = duration
+        self.samplerate = samplerate
+
+    def run(self):
+        try:
+            self.status_update.emit("Listening... 🎙️")
+            recording = sd.rec(
+                int(self.duration * self.samplerate),
+                samplerate=self.samplerate,
+                channels=1,
+                dtype='int16'
+            )
+            sd.wait()
+            self.status_update.emit("Recognizing... ⏳")
+
+            # Convert numpy audio buffer into standard WAV in memory
+            byte_io = io.BytesIO()
+            with wave.open(byte_io, 'wb') as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(self.samplerate)
+                wf.writeframes(recording.tobytes())
+            byte_io.seek(0)
+
+            recognizer = sr.Recognizer()
+            with sr.AudioFile(byte_io) as source:
+                audio = recognizer.record(source)
+
+            # High-accuracy online Google STT (0% CPU impact)
+            text = recognizer.recognize_google(audio)
+            self.text_ready.emit(text)
+        except sr.UnknownValueError:
+            self.error.emit("Didn't catch that! Speak again?")
+        except Exception as e:
+            self.error.emit(f"Mic error: {str(e)[:30]}")
+
+
+# ----------------- Worker Thread for Cute Text-to-Speech -----------------
+class TTSWorker(QThread):
+    def __init__(self, text):
+        super().__init__()
+        self.text = text
+
+    def run(self):
+        try:
+            engine = pyttsx3.init()
+            engine.setProperty('rate', 170)  # Cheerful friendly pace
+            voices = engine.getProperty('voices')
+            for v in voices:
+                if "zira" in v.name.lower() or "female" in v.name.lower() or "eva" in v.name.lower():
+                    engine.setProperty('voice', v.id)
+                    break
+            engine.say(self.text)
+            engine.runAndWait()
+        except Exception:
+            pass
+
+
+# ----------------- 3D Desktop Blob Widget -----------------
 class CuteBlobWidget(QWidget):
     def __init__(self):
         super().__init__()
 
-        # Frameless, transparent floating overlay
+        # Top-level frameless, always-on-top, translucent tool window
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.WindowStaysOnTopHint |
-            Qt.WindowType.SubWindow
+            Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setFixedSize(240, 270)
+        self.setFixedSize(260, 340)
 
-        # Animation states
-        self.emotion = "idle"  # idle, thinking, typing, happy, surprised
-        self.radius_offset = 0.0
-        self.pulse_dir = 1.0
-        self.is_blinking = False
-        self.blink_counter = 0
+        self.emotion = "idle"
         self.old_pos = None
         self.pending_payload = ""
+        self.is_recording = False
 
-        # UI Layout
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(12, 160, 12, 10)
+        # --- UI Layout ---
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(6, 6, 6, 10)
+        main_layout.setSpacing(6)
 
-        # Cute speech bubble / Status caption
-        self.speech_lbl = QLabel("Hi! I'm Jarvis ✨", self)
+        # 1. 3D WebGL Viewport (Three.js jelly model with real-time physics)
+        self.web_view = QWebEngineView(self)
+        self.web_view.page().setBackgroundColor(QColor(0, 0, 0, 0))
+        self.web_view.setStyleSheet("background: transparent; border: none;")
+        self.web_view.setFixedHeight(210)
+
+        # Load local Three.js 3D scene
+        html_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", "blob3d.html"))
+        self.web_view.load(QUrl.fromLocalFile(html_file))
+        main_layout.addWidget(self.web_view)
+
+        # 2. Cute Speech Bubble / Status Caption
+        self.speech_lbl = QLabel("Hi! I'm Blob ✨", self)
         self.speech_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.speech_lbl.setWordWrap(True)
         self.speech_lbl.setStyleSheet("""
-            color: #2D3748; 
-            font-weight: 700; 
-            font-size: 11px;
-            background: rgba(255, 255, 255, 0.85);
-            border-radius: 8px;
-            padding: 3px;
+            QLabel {
+                color: #2D3748; 
+                font-weight: 700; 
+                font-size: 11px;
+                background: rgba(255, 255, 255, 0.92);
+                border: 1px solid rgba(226, 232, 240, 0.8);
+                border-radius: 10px;
+                padding: 4px 8px;
+            }
         """)
-        layout.addWidget(self.speech_lbl)
+        main_layout.addWidget(self.speech_lbl)
+
+        # 3. Input & Voice Controls Bar
+        control_bar = QHBoxLayout()
+        control_bar.setSpacing(6)
 
         # Rounded modern input box
         self.input_field = QLineEdit(self)
-        self.input_field.setPlaceholderText("Tell me what to do...")
+        self.input_field.setPlaceholderText("Tell Blob what to do...")
         self.input_field.setStyleSheet("""
             QLineEdit {
                 background: rgba(255, 255, 255, 0.95);
                 border: 2px solid #CBD5E0;
                 border-radius: 14px;
-                padding: 6px 12px;
-                font-size: 12px;
+                padding: 6px 10px;
+                font-size: 11px;
                 color: #1A202C;
             }
             QLineEdit:focus {
-                border: 2px solid #805AD5;
+                border: 2px solid #9F7AEA;
             }
         """)
         self.input_field.returnPressed.connect(self.start_ai_task)
-        layout.addWidget(self.input_field)
+        control_bar.addWidget(self.input_field)
 
-        # 30 FPS pulse & blink timer
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update_animation)
-        self.timer.start(33)
+        # Built-in Microphone Button (Voice-To-Chat)
+        self.mic_btn = QPushButton("🎙️", self)
+        self.mic_btn.setFixedSize(32, 32)
+        self.mic_btn.setToolTip("Click to speak with Blob")
+        self.mic_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.95);
+                border: 2px solid #CBD5E0;
+                border-radius: 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #EDF2F7;
+                border: 2px solid #9F7AEA;
+            }
+            QPushButton:pressed {
+                background: #E2E8F0;
+            }
+        """)
+        self.mic_btn.clicked.connect(self.toggle_voice_record)
+        control_bar.addWidget(self.mic_btn)
 
-        # Return to idle after actions
+        main_layout.addLayout(control_bar)
+
+        # Return to idle after actions timer
         self.reset_timer = QTimer(self)
         self.reset_timer.setSingleShot(True)
         self.reset_timer.timeout.connect(self.set_idle)
 
-    # --- Animations & Facial Expressions ---
-    def update_animation(self):
-        # Breathing pulse
-        speed = 0.4 if self.emotion == "thinking" else 0.2
-        self.radius_offset += speed * self.pulse_dir
-        if abs(self.radius_offset) > 5:
-            self.pulse_dir *= -1
-
-        # Random natural blink
-        self.blink_counter += 1
-        if self.blink_counter > 100:
-            if random.random() < 0.05:
-                self.is_blinking = True
-                if self.blink_counter > 106:
-                    self.is_blinking = False
-                    self.blink_counter = 0
-
-        self.update()
+    # --- 3D Emotion & Physics Synchronization ---
+    def set_emotion(self, emotion):
+        self.emotion = emotion
+        self.web_view.page().runJavaScript(f"window.setEmotion('{emotion}');")
 
     def set_idle(self):
-        self.emotion = "idle"
+        self.set_emotion("idle")
         self.speech_lbl.setText("I'm ready! ✨")
-        self.update()
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        cx, cy = 120, 75
-        r = 48 + self.radius_offset
-
-        # 1. Body Color based on Emotion
-        color_map = {
-            "idle": QColor(214, 188, 250),       # Soft lilac
-            "thinking": QColor(251, 211, 141),   # Warm golden orange
-            "typing": QColor(144, 205, 244),     # Tech cyan
-            "happy": QColor(251, 182, 206),      # Sweet pink
-            "surprised": QColor(198, 246, 213)   # Mint green
-        }
-        body_color = color_map.get(self.emotion, color_map["idle"])
-
-        painter.setBrush(QBrush(body_color))
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.drawEllipse(int(cx - r), int(cy - r), int(r * 2), int(r * 2))
-
-        # 2. Cheeks (Blush)
-        painter.setBrush(QBrush(QColor(245, 101, 101, 140)))
-        painter.drawEllipse(cx - 30, cy + 6, 12, 7)
-        painter.drawEllipse(cx + 18, cy + 6, 12, 7)
-
-        # 3. Eyes & Expressions
-        eye_color = QColor(45, 55, 72)
-        painter.setPen(QPen(eye_color, 3, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.setBrush(QBrush(eye_color))
-
-        if self.is_blinking:
-            # Closed eyes (flat line)
-            painter.drawLine(cx - 20, cy - 4, cx - 10, cy - 4)
-            painter.drawLine(cx + 10, cy - 4, cx + 20, cy - 4)
-
-        elif self.emotion == "happy":
-            # Happy smiling eyes (^ ^)
-            painter.setBrush(Qt.BrushStyle.NoBrush)
-            painter.drawArc(cx - 22, cy - 12, 14, 12, 30 * 16, 120 * 16)
-            painter.drawArc(cx + 8, cy - 12, 14, 12, 30 * 16, 120 * 16)
-
-        elif self.emotion == "thinking":
-            # Looking up into thoughts
-            painter.drawEllipse(cx - 16, cy - 12, 8, 9)
-            painter.drawEllipse(cx + 12, cy - 12, 8, 9)
-            # Highlights
-            painter.setBrush(QBrush(QColor(255, 255, 255)))
-            painter.drawEllipse(cx - 14, cy - 11, 3, 3)
-            painter.drawEllipse(cx + 14, cy - 11, 3, 3)
-
-        elif self.emotion == "typing":
-            # Looking down at work
-            painter.drawEllipse(cx - 16, cy + 1, 8, 8)
-            painter.drawEllipse(cx + 8, cy + 1, 8, 8)
-
-        else:
-            # Standard cute big eyes
-            painter.drawEllipse(cx - 18, cy - 7, 9, 11)
-            painter.drawEllipse(cx + 9, cy - 7, 9, 11)
-            # Sparkle shine
-            painter.setBrush(QBrush(QColor(255, 255, 255)))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(cx - 16, cy - 6, 3, 4)
-            painter.drawEllipse(cx + 11, cy - 6, 3, 4)
-
-        # 4. Cute Mouth
-        painter.setPen(QPen(eye_color, 2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
-        painter.setBrush(Qt.BrushStyle.NoBrush)
-
-        if self.emotion == "happy":
-            # Wide smile
-            painter.drawArc(cx - 7, cy + 2, 14, 10, 200 * 16, 140 * 16)
-        elif self.emotion == "surprised":
-            # Little :o mouth
-            painter.setBrush(QBrush(eye_color))
-            painter.drawEllipse(cx - 3, cy + 8, 6, 8)
-        else:
-            # Gentle smile
-            painter.drawArc(cx - 6, cy + 4, 12, 8, 200 * 16, 140 * 16)
-
-    # --- Dragging ---
+    # --- Mouse Dragging & Cursor Tracking in 3D ---
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.old_pos = event.globalPosition().toPoint()
+            self.web_view.page().runJavaScript("window.triggerJiggle(0.35);")
 
     def mouseMoveEvent(self, event):
+        # Calculate normalized mouse coordinates for 3D eye tracking
+        norm_x = event.position().x() / self.width()
+        norm_y = event.position().y() / self.height()
+        self.web_view.page().runJavaScript(f"window.setMousePos({norm_x:.2f}, {norm_y:.2f});")
+
         if self.old_pos:
             delta = event.globalPosition().toPoint() - self.old_pos
             self.move(self.x() + delta.x(), self.y() + delta.y())
@@ -242,6 +260,62 @@ class CuteBlobWidget(QWidget):
     def mouseReleaseEvent(self, event):
         self.old_pos = None
 
+    # --- Voice-to-Chat (Microphone) ---
+    def toggle_voice_record(self):
+        if self.is_recording:
+            return
+
+        self.is_recording = True
+        self.mic_btn.setText("🔴")
+        self.mic_btn.setStyleSheet("""
+            QPushButton {
+                background: #FED7D7;
+                border: 2px solid #E53E3E;
+                border-radius: 16px;
+                font-size: 14px;
+            }
+        """)
+        self.set_emotion("thinking")
+        self.speech_lbl.setText("Listening... 🎙️")
+
+        self.voice_worker = VoiceWorker(duration=4)
+        self.voice_worker.status_update.connect(self.on_voice_status)
+        self.voice_worker.text_ready.connect(self.on_voice_success)
+        self.voice_worker.error.connect(self.on_voice_error)
+        self.voice_worker.start()
+
+    def on_voice_status(self, msg):
+        self.speech_lbl.setText(msg)
+
+    def on_voice_success(self, recognized_text):
+        self.reset_mic_button()
+        self.input_field.setText(recognized_text)
+        self.speech_lbl.setText(f'Heard: "{recognized_text}"')
+        # Automatically process the voice command with Ollama
+        QTimer.singleShot(600, self.start_ai_task)
+
+    def on_voice_error(self, err_msg):
+        self.reset_mic_button()
+        self.set_emotion("surprised")
+        self.speech_lbl.setText(err_msg)
+        self.reset_timer.start(3500)
+
+    def reset_mic_button(self):
+        self.is_recording = False
+        self.mic_btn.setText("🎙️")
+        self.mic_btn.setStyleSheet("""
+            QPushButton {
+                background: rgba(255, 255, 255, 0.95);
+                border: 2px solid #CBD5E0;
+                border-radius: 16px;
+                font-size: 14px;
+            }
+            QPushButton:hover {
+                background: #EDF2F7;
+                border: 2px solid #9F7AEA;
+            }
+        """)
+
     # --- AI Processing ---
     def start_ai_task(self):
         text = self.input_field.text().strip()
@@ -249,11 +323,9 @@ class CuteBlobWidget(QWidget):
             return
 
         self.input_field.clear()
-        self.emotion = "thinking"
-        self.speech_lbl.setText("Thinking...")
-        self.update()
+        self.set_emotion("thinking")
+        self.speech_lbl.setText("Thinking... 💭")
 
-        # Run model asynchronously
         self.worker = AIWorker(text)
         self.worker.finished.connect(self.on_ai_success)
         self.worker.error.connect(self.on_ai_error)
@@ -262,16 +334,21 @@ class CuteBlobWidget(QWidget):
     def on_ai_success(self, data):
         action = data.get("action", "chat")
         payload = data.get("payload", "")
-        self.emotion = data.get("emotion", "happy")
+        emotion = data.get("emotion", "happy")
         speech = data.get("speech", "Done!")
 
+        self.set_emotion(emotion)
         self.speech_lbl.setText(speech)
-        self.update()
+
+        # Speak back with cute TTS voice in background
+        if speech:
+            self.tts = TTSWorker(speech)
+            self.tts.start()
 
         # 1. Open Website / URL
         if action == "open_url":
             webbrowser.open(payload)
-            self.reset_timer.start(4000)
+            self.reset_timer.start(4500)
 
         # 2. Launch Windows Application
         elif action == "open_app":
@@ -286,29 +363,27 @@ class CuteBlobWidget(QWidget):
                 os.system("start explorer")
             else:
                 os.system(f"start {app_name}")
-            self.reset_timer.start(4000)
+            self.reset_timer.start(4500)
 
         # 3. Type text into user's active window
         elif action == "type_text":
             self.pending_payload = payload
             self.speech_lbl.setText("Click text box now! (2s)")
-            # Wait 2 seconds so user can click Notepad or input box
             QTimer.singleShot(2000, self.execute_typing)
 
         # 4. Standard Chat
         else:
-            self.speech_lbl.setText(payload[:28] if payload else speech)
+            self.speech_lbl.setText(payload[:36] if payload else speech)
             self.reset_timer.start(6000)
 
     def execute_typing(self):
-        # Quick clipboard paste preserves multiline format cleanly
         pyperclip.copy(self.pending_payload)
         pyautogui.hotkey('ctrl', 'v')
         self.speech_lbl.setText("Finished writing! ✍️")
         self.reset_timer.start(3500)
 
     def on_ai_error(self, err_msg):
-        self.emotion = "surprised"
+        self.set_emotion("surprised")
         self.speech_lbl.setText("Oops, error!")
         print("AI Error:", err_msg)
         self.reset_timer.start(4000)
@@ -317,9 +392,13 @@ class CuteBlobWidget(QWidget):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     blob = CuteBlobWidget()
-    
-    # Position in bottom-right corner of screen
-    screen_geo = app.primaryScreen().geometry()
-    blob.move(screen_geo.width() - 270, screen_geo.height() - 360)
+
+    # Position in bottom-right corner of available screen geometry (above taskbar)
+    screen_geo = app.primaryScreen().availableGeometry()
+    blob.move(screen_geo.width() - 280, screen_geo.height() - 380)
+
     blob.show()
+    blob.raise_()
+    blob.activateWindow()
+
     sys.exit(app.exec())

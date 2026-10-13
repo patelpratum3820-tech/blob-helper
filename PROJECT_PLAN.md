@@ -1,7 +1,7 @@
-# 🌟 BLOB AI (JARVIS) — 3D & VOICE EVOLUTION PLAN
+# 🌟 BLOB HELPER — 3D & VOICE EVOLUTION PLAN
 
-## 🚀 1. The Vision of Blob AI
-**Blob AI** is your living, intelligent desktop companion ("Jarvis") that sits on your Windows screen as a floating, frameless interactive entity. Rather than an ordinary boring chatbot window, it is an animated digital pet that:
+## 🚀 1. The Vision of Blob Helper
+**Blob Helper** is your living, intelligent desktop companion ("Blob") that sits on your Windows screen as a floating, frameless interactive entity. Rather than an ordinary boring chatbot window, it is an animated digital pet that:
 - Floats on your desktop, reacts to what you do, and expresses emotions in **real-time 3D**.
 - Understands your spoken voice via **in-built microphone voice-to-chat** (no more manual Win + H).
 - Uses your local **Ollama AI (`qwen2.5:3b`)** to think, chat, open apps, surf websites, and type for you.
@@ -51,7 +51,7 @@ We integrate speech recognition directly into the Python app:
    - **Option 1 (Fast & Easy):** Python `speech_recognition` (works instantly, very lightweight).
    - **Option 2 (100% Offline & Private):** `faster-whisper` (runs OpenAI Whisper locally on your CPU/GPU, ultra-accurate, never sends audio to the internet, matches Ollama's privacy).
 3. **Voice Feedback (Text-to-Speech / TTS - Optional Bonus):**
-   - Jarvis can talk back with a cute, friendly voice using `pyttsx3` or neural `edge-tts`!
+   - Blob can talk back with a cute, friendly voice using `pyttsx3` or neural `edge-tts`!
 
 ---
 
