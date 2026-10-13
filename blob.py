@@ -1,5 +1,12 @@
 import sys
 import os
+
+# Ensure pythonw does not crash on None stdout/stderr in Windows GUI mode
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
 import json
 import random
 import io
