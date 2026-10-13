@@ -1,0 +1,91 @@
+================================================================================
+                    BLOB AI (JARVIS) - PROJECT VISION & EVOLUTION PLAN
+================================================================================
+
+1. VISION OF THIS PROJECT:
+   Blob AI is your living, floating 3D desktop companion ("Jarvis"). It stays 
+   on top of your Windows screen without frames or borders, talks with personality,
+   moves and expresses emotions in real-time 3D, and listens directly through an
+   in-built microphone to execute actions or chat via local Ollama AI.
+
+--------------------------------------------------------------------------------
+2. ANSWERING YOUR QUESTIONS:
+--------------------------------------------------------------------------------
+
+[QUESTION 1]: Is it possible to change Blob from 2D to real 3D that moves around 
+              and has emotions (not frame-by-frame)?
+[ANSWER]: YES! 100% POSSIBAL!
+   - Why 2D is limited: Right now, blob.py uses 2D pixel circle drawing (QPainter).
+   - How 3D works:
+     * We use a real 3D mesh (Three.js/WebGL or ModernGL/OpenGL) inside a transparent
+       floating PyQt window.
+     * Dynamic squish & jelly physics: Vertex displacement shader gives Blob organic,
+       jiggly, bouncy fluid motion at 60 FPS.
+     * 3D Emotions & Morphs:
+       - Idle: Floating gently, subtle breathing, natural 3D blinks.
+       - Thinking: Tilts up looking at the sky, golden pulsing wave.
+       - Happy: Bouncy squash-and-stretch, smiling 3D eye morphs.
+       - Surprised: Elastic stretch, eyes widen, mouth opens in 3D.
+       - Typing: Cyan glow, rhythmic forward lean.
+     * Real-time 3D Eye Tracking: The 3D eyes can physically follow your mouse cursor
+       across your monitor!
+     * You can also load any custom 3D character (.glb / .gltf model) from Blender!
+
+[QUESTION 2]: Is it possible to build an in-built mic for voice-to-chat instead of 
+              pressing Windows + H?
+[ANSWER]: YES! 100% POSSIBAL!
+   - Currently you have to press Win + H (Windows speech dictation).
+   - With in-built microphone integration:
+     * A cute mic button on Blob or push-to-talk hotkey (e.g. hold Space).
+     * Python audio listener records speech directly from your microphone.
+     * Speech-to-Text converts your voice into text automatically.
+     * The prompt is sent straight to Ollama (qwen2.5:3b) without typing anything!
+     * Bonus: We can add Text-to-Speech (TTS) so Jarvis can speak back with a cute voice!
+
+[QUESTION 3]: How do I upload this project to GitHub with Ollama setup and model download?
+[ANSWER]: CRITICAL WARNING & EASY SOLUTION:
+   - Warning: Your folder currently contains OllamaSetup.exe (1.5 GB).
+     GitHub rejects files larger than 100 MB!
+   - Steps to upload cleanly:
+     1. .gitignore file has been created to prevent uploading large 1.5GB files.
+     2. README.md has been created with clear instructions for anyone downloading
+        your project (how to install Ollama, run 'ollama run qwen2.5:3b', and launch).
+     3. Git commands to push:
+        git init
+        git add .
+        git commit -m "Initial commit: Blob AI 3D Voice Assistant"
+        git branch -M main
+        git remote add origin https://github.com/YOUR_USERNAME/blob-ai.git
+        git push -u origin main
+
+--------------------------------------------------------------------------------
+3. TAILORED FOR YOUR PC (i3 12th Gen, 16 GB RAM, Intel UHD Graphics):
+--------------------------------------------------------------------------------
+   - CPU & RAM: Your Intel i3 12th Gen + 16GB RAM is fast and has plenty of memory.
+     Ollama qwen2.5:3b only uses ~2.2 GB RAM, leaving ~13.8 GB completely free!
+   - Best 3D Choice: Option A (Three.js WebGL via PyQt6-WebEngine).
+     * Intel UHD integrated graphics natively hardware-accelerates WebGL.
+     * The procedural 3D jelly mesh takes <1.5% CPU and runs locked at 60 FPS.
+     * No dedicated GPU required, zero fan noise, no laptop overheating.
+   - Voice STT: Fast Google STT or local Whisper tiny uses virtually zero CPU.
+
+--------------------------------------------------------------------------------
+4. AUTO-START ON LAPTOP BOOT (NO CMD, NO MANUAL COMMANDS):
+--------------------------------------------------------------------------------
+   - You NEVER have to open CMD or paste commands to run Blob AI.
+   - Files created:
+     * enable_autostart.bat: Double-click once! Adds Blob AI to Windows Startup.
+     * disable_autostart.bat: Double-click to turn off auto-start anytime.
+     * run_blob_silent.vbs: Uses pythonw.exe to run completely silently with NO black CMD box.
+     * Launch_Blob.bat: Double-click anytime to launch manually.
+
+--------------------------------------------------------------------------------
+5. RECOMMENDED IMPLEMENTATION PHASES:
+--------------------------------------------------------------------------------
+Phase 1: Git & Repo Setup (DONE - created .gitignore, README.md, requirements.txt, autostart)
+Phase 2: In-built Microphone Voice-to-Chat (Audio capture + STT + Ollama integration)
+Phase 3: 3D Procedural Jelly Sphere / GLTF 3D Character with 60 FPS physics
+Phase 4: 3D Facial Emotion Morphs & Mouse Tracking
+Phase 5: Screen wandering / playful desktop interactions & Voice Feedback (TTS)
+
+================================================================================
