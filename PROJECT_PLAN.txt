@@ -58,16 +58,46 @@
         git remote add origin https://github.com/YOUR_USERNAME/blob-ai.git
         git push -u origin main
 
+
+[QUESTION 4]: Can we use 3 or 4 AI models instead of 1 (fast model for small tasks, 
+              heavy model for hard tasks, dedicated Voice AI) with auto-switching 
+              based on task? Will it work on my i3 12th Gen, 16 GB RAM, 50 GB storage?
+[ANSWER]: YES! 100% POSSIBAL & HIGHLY RECOMMENDED!
+   - Why it is possible on your specs:
+     * RAM (16 GB): Models do not all run at the same time. Ollama dynamically swaps
+       models using smart memory management. Peak RAM will only be ~4.5 to 5.5 GB,
+       leaving more than 10 GB completely free for Windows!
+     * Storage (50 GB): All 3-4 models together take only ~7.5 GB total! You will 
+       still have over 42 GB of free storage left.
+     * CPU (i3 12th Gen): 12th Gen Intel CPU has fast Golden Cove performance cores.
+       Small models run at 40-60 tokens/second (feels instantaneous!).
+   
+   - The 4-Model System:
+     1. TIER 1 (Fast / Small - Qwen2.5:0.5B / ~400MB RAM):
+        Instant greetings, simple chats, volume/app triggers (<200ms latency).
+     2. TIER 2 (Balanced / Daily - Qwen2.5:3B / ~2.2GB RAM):
+        Everyday conversation, desktop automation, summarizing, standard queries.
+     3. TIER 3 (Heavy / Power - Qwen2.5-Coder:7B / ~4.8GB RAM):
+        Automatically activates for coding, debugging, math, and complex multi-step reasoning.
+     4. TIER 4 (Voice AI - Microsoft Neural Voices via edge-tts or Piper Neural):
+        Natural, expressive human companion speech (no more robotic Windows voice!).
+
+   - Automatic Switching (Smart Router):
+     You never need to change models manually! Blob automatically inspects the input:
+     * Simple greeting / quick question -> Routes to Tier 1 instantly.
+     * Code / math / complex prompt -> Routes to Tier 3 with "Thinking deeply..." animation.
+     * Normal chat / actions -> Routes to Tier 2.
+
 --------------------------------------------------------------------------------
 3. TAILORED FOR YOUR PC (i3 12th Gen, 16 GB RAM, Intel UHD Graphics):
 --------------------------------------------------------------------------------
    - CPU & RAM: Your Intel i3 12th Gen + 16GB RAM is fast and has plenty of memory.
-     Ollama qwen2.5:3b only uses ~2.2 GB RAM, leaving ~13.8 GB completely free!
+     Tiered models use between 0.5 GB and 4.8 GB RAM, leaving 10+ GB free at all times!
    - Best 3D Choice: Option A (Three.js WebGL via PyQt6-WebEngine).
      * Intel UHD integrated graphics natively hardware-accelerates WebGL.
      * The procedural 3D jelly mesh takes <1.5% CPU and runs locked at 60 FPS.
      * No dedicated GPU required, zero fan noise, no laptop overheating.
-   - Voice STT: Fast Google STT or local Whisper tiny uses virtually zero CPU.
+   - Voice STT & Voice AI: Neural voice synthesis streams smoothly with zero CPU lag.
 
 --------------------------------------------------------------------------------
 4. AUTO-START ON LAPTOP BOOT (NO CMD, NO MANUAL COMMANDS):
@@ -83,9 +113,11 @@
 5. RECOMMENDED IMPLEMENTATION PHASES:
 --------------------------------------------------------------------------------
 Phase 1: Git & Repo Setup (DONE - created .gitignore, README.md, requirements.txt, autostart)
-Phase 2: In-built Microphone Voice-to-Chat (Audio capture + STT + Ollama integration)
-Phase 3: 3D Procedural Jelly Sphere / GLTF 3D Character with 60 FPS physics
-Phase 4: 3D Facial Emotion Morphs & Mouse Tracking
-Phase 5: Screen wandering / playful desktop interactions & Voice Feedback (TTS)
+Phase 2: In-built Microphone Voice-to-Chat & Neural Voice AI (edge-tts / Piper)
+Phase 3: Multi-Model Auto-Router (Tier 1: 0.5B, Tier 2: 3B, Tier 3: 7B Coder)
+Phase 4: 3D Procedural Jelly Sphere / GLTF 3D Character with 60 FPS physics
+Phase 5: 3D Facial Emotion Morphs & Mouse Tracking
+Phase 6: Screen wandering / playful desktop interactions & Voice Feedback (TTS)
 
 ================================================================================
+

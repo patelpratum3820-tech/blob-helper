@@ -33,6 +33,14 @@ venv/
 .venv/
 ENV/
 
+# Local Runtime & Logs
+err.log
+*.log
+blob_cache.json
+*.mp3
+*.wav
+*backup*
+
 # IDE & OS
 .vscode/
 .idea/
@@ -41,3 +49,4 @@ ENV/
 Thumbs.db
 Desktop.ini
 .DS_Store
+
