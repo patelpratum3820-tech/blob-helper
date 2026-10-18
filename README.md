@@ -1,25 +1,25 @@
-# 🫧 Rimuru Slime & Great Sage Raphael — 3D Desktop AI Companion
+# 🔮 Remorus AI — Minimalist Floating Glass Jelly Sphere
 
-An interactive, animated 3D desktop companion inspired by **Rimuru Tempest (Slime form)** and **Great Sage / Raphael (Wisdom King)** from *Tensura*. Powered by local AI (**Ollama**) with multi-model automatic task routing and neural voice feedback.
+An ultra-sleek, minimalist 3D desktop companion powered by local AI (**Ollama**) with multi-model automatic task routing and neural voice feedback. Designed with zero UI clutter, ambient levitation, and weightless interaction.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
 ![PyQt6](https://img.shields.io/badge/GUI-PyQt6-green.svg)
 ![Ollama](https://img.shields.io/badge/AI-Ollama%20(qwen2.5)-purple.svg)
-![Three.js](https://img.shields.io/badge/3D-Three.js%20(Translucent%20Slime)-cyan.svg)
+![Three.js](https://img.shields.io/badge/3D-Three.js%20(Glass%20Jelly%20Sphere)-cyan.svg)
 
 ---
 
 ## ✨ Features
-- 🔮 **Rimuru Slime Form in 3D:** Semi-translucent sky-blue droplet body with water refraction (`MeshPhysicalMaterial`), squishy jelly physics, and expressive curved line eyes `( ^ ^ )`.
-- 🧠 **Great Sage / Raphael Persona:** Composed, analytical, sharp responses addressing you as Master.
-- ⚡ **Raphael Inner Wisdom Core:** Glowing inner core that shifts into a golden wisdom pulse when calculating.
-- 🎙️ **Voice-to-Chat:** In-built microphone support for hands-free voice commands.
-- 🗣️ **Raphael Neural Voice:** Calm, articulate, omniscient neural voice (`en-US-AvaNeural`, pitch `+6Hz`).
-- 🧠 **Multi-Model Dynamic Routing:** Auto-switches between fast (`0.5B`), balanced (`3B`), and heavy coding (`7B`) models based on task complexity.
-- ⚡ **Desktop Automation:** Opens websites, launches applications, and types text on command.
+- 🔮 **Minimalist Floating Glass Jelly Sphere:** Clean, smooth, refractive glass jelly sphere with bioluminescent neural core and orbital energy rings. No cartoon eyes, no mouths, pure aesthetic.
+- 🪶 **Weightless Ambient Levitation:** Gentle, serene floating in 3D space with zero gravity, zero bouncing, and smooth window translation.
+- 🎙️ **Ambient Voice-Activated:** Completely invisible UI controls. Simply click the sphere directly or tap `Alt+C` / `Ctrl+Space` to speak.
+- 🗣️ **Neural Voice AI:** Natural, articulate, omniscient voice response system (`en-US-AvaNeural`, pitch `+6Hz`).
+- 🧠 **Multi-Model Dynamic Routing:** Auto-switches between fast (`0.5B`), balanced (`3B`), and deep coding (`7B`) models based on task complexity.
+- ⚡ **Desktop Automation:** Launches applications, opens websites, and types text on voice command.
 - 🔒 **100% Private & Local:** Runs completely on your PC using Ollama.
 
 ---
+
 
 
 ## 🧠 Multi-Model AI Architecture (Auto-Task Routing)

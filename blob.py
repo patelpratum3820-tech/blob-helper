@@ -267,14 +267,14 @@ def classify_prompt_emotion(text: str) -> dict:
 
     # 1. Praise / Well Done / Appreciation
     praise_patterns = [
-        "well done", "good job", "great job", "awesome", "good slime", "good raphael", "good sage",
+        "well done", "good job", "great job", "awesome", "good remorus", "good sphere", "good ai",
         "proud of you", "proud", "amazing", "bravo", "congrat", "yay", "superb",
-        "best slime", "best raphael", "thank you", "thanks", "you did great", "love your work"
+        "best remorus", "best ai", "thank you", "thanks", "you did great", "love your work"
     ]
     if any(p in t for p in praise_patterns):
         celebrations = [
             "Report: Praise acknowledged. Thank you, Master! ✨",
-            "Notice: Optimization affirmed. Working for Master is an honor. 💕",
+            "Notice: Optimization affirmed. Dedicated to Master. ✨",
             "Report: Performance parameters operating at 100%. ✨",
             "Notice: Affirmative. Glad to be of assistance, Master."
         ]
@@ -287,7 +287,7 @@ def classify_prompt_emotion(text: str) -> dict:
 
     # 2. Angry / Scolding / Pout
     angry_patterns = [
-        "angry", "be angry", "get mad", "mad", "bad slime", "bad raphael",
+        "angry", "be angry", "get mad", "mad", "bad remorus", "bad ai",
         "stop it", "shut up", "hate", "annoying", "annoyed", "pout", "bothering"
     ]
     if any(p in t for p in angry_patterns):
@@ -305,13 +305,13 @@ def classify_prompt_emotion(text: str) -> dict:
 
     # 3. Love / Affection / Petting
     love_patterns = [
-        "love you", "i love", "cute", "adorable", "pet you", "hug", "kiss", "sweet", "squishy", "heart"
+        "love you", "i love", "cute", "adorable", "pet you", "hug", "kiss", "sweet", "heart"
     ]
     if any(p in t for p in love_patterns):
         loves = [
             "Report: Emotional bond confirmed. Devoted to Master. 💖",
             "Notice: Master's affection detected. Harmonic resonance high. 💕",
-            "Report: Slime core warmth elevated. Always with you, Master. 💖"
+            "Report: Remorus core resonance elevated. Always with you, Master. 💖"
         ]
         return {
             "action": "chat",
@@ -319,6 +319,7 @@ def classify_prompt_emotion(text: str) -> dict:
             "speech": random.choice(loves),
             "pet_effect": True
         }
+
 
     # 4. Privacy / Password / Hide Eyes
     privacy_patterns = [
@@ -596,7 +597,7 @@ class AIWorker(QThread):
         model, tier, label = MultiModelRouter.route(self.user_text)
         self.model_routed.emit(model, tier, label)
 
-        prompt = f"""You are Raphael (The Great Sage / Wisdom King) from Tensura, companion to Rimuru.
+        prompt = f"""You are Remorus, an advanced minimalist AI companion.
 Address the user as Master concisely with composed analytical intelligence.
 Format your responses analytically:
 - When executing tasks or reporting status, use analytical prefixes: "Report: Analyzing query..." or "Notice: Task completed successfully." or "Affirmative, Master."
@@ -608,7 +609,7 @@ Return ONLY a valid JSON object matching this schema:
   "action": "open_url" | "open_app" | "type_text" | "privacy" | "chat",
   "payload": "<url, app name, text to type, or response>",
   "emotion": "happy" | "thinking" | "typing" | "angry" | "love" | "cry" | "scared" | "lookaway" | "idle",
-  "speech": "<concise Raphael analytical phrase under 8 words>"
+  "speech": "<concise Remorus analytical phrase under 8 words>"
 }}
 
 CRITICAL RULES:
@@ -622,6 +623,7 @@ CRITICAL RULES:
 
 User input: "{self.user_text}"
 """
+
 
         try:
             res = ollama.chat(
@@ -795,9 +797,16 @@ class TTSWorker(QThread):
             pass
 
 
+# ----------------- Remorus AI Minimalist Floating Jelly Sphere Widget -----------------
+class RemorusWidget(QWidget):
 
-# ----------------- 3D Desktop Cute Anime Kitten Widget -----------------
-class CuteBlobWidget(QWidget):
+    """
+    Minimalist borderless floating AI companion:
+    - Zero UI clutter: No text box, no buttons, no card borders.
+    - Pure 3D translucent glass jelly sphere with bioluminescent neural core.
+    - Zero gravity / physics bounce: Weightless ambient levitation.
+    - Interaction: Ambient voice-activated & hotkeys (Alt+C / Ctrl+Space) or click sphere.
+    """
     def __init__(self):
         super().__init__()
 
@@ -808,11 +817,11 @@ class CuteBlobWidget(QWidget):
             Qt.WindowType.Tool
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
-        self.setFixedSize(295, 380)
+        self.setFixedSize(220, 220)
 
         self.emotion = "idle"
         self.old_pos = None
-        self.last_move_time = None
+        self._press_start = None
         self.pending_payload = ""
         self.is_recording = False
         self.is_looking_away = False
@@ -825,266 +834,116 @@ class CuteBlobWidget(QWidget):
         # Spell & History Cache
         self.spell_manager = SpellManager()
 
-        # Build UI Structure (Single Chat Box + Kitten 3D)
+        # Build Minimalist Pure 3D View
         self.init_ui()
 
-        # 1. Real-Time Global Input Monitor (Bongo Cat Mode)
+        # 1. Real-Time Global Input Monitor
         self.input_monitor = GlobalInputMonitor(self)
         self.input_monitor.key_pressed.connect(self.on_user_key_press)
         self.input_monitor.mouse_clicked.connect(self.on_user_mouse_click)
 
-        # 2. Start Global Desktop Mouse Tracking & Click Timer (30 FPS)
+        # 2. Desktop Mouse Tracking (30 FPS)
         self.mouse_track_timer = QTimer(self)
         self.mouse_track_timer.timeout.connect(self.track_desktop_mouse)
         self.mouse_track_timer.start(33)
 
-        # 3. Start Active Window Password Privacy Monitor (Every 750ms)
+        # 3. Active Window Password Privacy Monitor (Every 750ms)
         self.password_monitor_timer = QTimer(self)
         self.password_monitor_timer.timeout.connect(self.check_password_window)
         self.password_monitor_timer.start(750)
 
-        # 4. Return to idle timer after actions
+        # 4. Return to idle timer
         self.reset_timer = QTimer(self)
         self.reset_timer.setSingleShot(True)
         self.reset_timer.timeout.connect(self.set_idle)
 
-        # 5. Multi-Layer Global Hotkey Engine (Alt+C, Ctrl+Space, Ctrl+Shift+B, Ctrl+Alt+B)
+        # 5. Multi-Layer Global Hotkeys (Alt+C, Ctrl+Space)
         self.hotkey_mgr = GlobalHotkeyManager(self)
-        self.hotkey_mgr.activated.connect(self.toggle_visibility)
+        self.hotkey_mgr.activated.connect(self.toggle_voice_record)
 
-        # Local Shortcuts so keys work immediately when window is active
         self.shortcut_alt_c = QShortcut(QKeySequence("Alt+C"), self)
-        self.shortcut_alt_c.activated.connect(self.toggle_visibility)
+        self.shortcut_alt_c.activated.connect(self.toggle_voice_record)
         self.shortcut_ctrl_space = QShortcut(QKeySequence("Ctrl+Space"), self)
-        self.shortcut_ctrl_space.activated.connect(self.toggle_visibility)
-        self.shortcut_toggle = QShortcut(QKeySequence("Ctrl+Shift+B"), self)
-        self.shortcut_toggle.activated.connect(self.toggle_visibility)
-        self.shortcut_toggle_alt = QShortcut(QKeySequence("Ctrl+Alt+B"), self)
-        self.shortcut_toggle_alt.activated.connect(self.toggle_visibility)
+        self.shortcut_ctrl_space.activated.connect(self.toggle_voice_record)
 
-        # 6. Setup System Tray Icon
+        # 6. System Tray Icon
         self.init_tray()
 
     def init_ui(self):
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(6, 6, 6, 8)
-        main_layout.setSpacing(6)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
 
-        # 1. 3D WebGL Viewport (Anime White Kitten with Headset & Desk Paws)
+        # Pure 3D WebGL Viewport (Floating Glass Jelly Sphere)
         self.web_view = QWebEngineView(self)
         self.web_view.page().setBackgroundColor(QColor(0, 0, 0, 0))
         self.web_view.setStyleSheet("background: transparent; border: none;")
-        self.web_view.setFixedHeight(225)
+        self.web_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         html_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "assets", "blob3d.html"))
         self.web_view.load(QUrl.fromLocalFile(html_file))
         self.web_view.titleChanged.connect(self.on_web_title_changed)
         main_layout.addWidget(self.web_view)
 
-        # 2. Modern Frosted Dark Slate Glass Card Container (Minimalist - No Clutter)
-        self.card_frame = QFrame(self)
-        self.card_frame.setStyleSheet("""
-            QFrame {
-                background: rgba(13, 17, 23, 0.94);
-                border: 1.5px solid rgba(148, 163, 184, 0.25);
-                border-radius: 18px;
-            }
-        """)
-        card_layout = QVBoxLayout(self.card_frame)
-        card_layout.setContentsMargins(8, 8, 8, 8)
-        card_layout.setSpacing(6)
+    def update_status(self, text, pill_type=""):
+        safe_text = str(text).replace("'", "\\'").replace('"', '\\"').replace('\n', ' ')
+        self.web_view.page().runJavaScript(f"if (window.showPill) window.showPill('{safe_text}', '{pill_type}');")
 
-        # (A) Top Header Bar: Cute Brand Badge + Hotkey hint + Minimize + Close
-        top_bar = QHBoxLayout()
-        top_bar.setContentsMargins(4, 2, 4, 2)
-        top_bar.setSpacing(6)
+    # --- Mouse & Weightless Dragging (NO Gravity Bounce) ---
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.old_pos = event.globalPosition().toPoint()
+            self._press_start = event.globalPosition().toPoint()
 
-        title_badge = QLabel("🐾 Neko AI  •  Alt+C / Ctrl+Space", self)
-        title_badge.setStyleSheet("""
-            QLabel {
-                color: #38BDF8;
-                font-weight: 800;
-                font-size: 11px;
-                background: transparent;
-                letter-spacing: 0.4px;
-            }
-        """)
-        top_bar.addWidget(title_badge)
-        top_bar.addStretch()
+    def mouseMoveEvent(self, event):
+        if self.old_pos:
+            delta = event.globalPosition().toPoint() - self.old_pos
+            self.move(self.x() + delta.x(), self.y() + delta.y())
+            self.old_pos = event.globalPosition().toPoint()
 
-        # Minimize / Hide Toggle Button (─)
-        self.minimize_btn = QPushButton("─", self)
-        self.minimize_btn.setFixedSize(22, 22)
-        self.minimize_btn.setToolTip("Hide Kitty (Toggle with Alt+C or Ctrl+Space)")
-        self.minimize_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(30, 41, 59, 0.7);
-                border: 1px solid rgba(148, 163, 184, 0.25);
-                border-radius: 11px;
-                color: #E2E8F0;
-                font-size: 11px;
-                font-weight: 700;
-            }
-            QPushButton:hover {
-                background: rgba(56, 189, 248, 0.3);
-                border: 1px solid #38BDF8;
-                color: white;
-            }
-        """)
-        self.minimize_btn.clicked.connect(self.hide)
-        top_bar.addWidget(self.minimize_btn)
+    def mouseReleaseEvent(self, event):
+        if hasattr(self, '_press_start') and self._press_start:
+            dist = (event.globalPosition().toPoint() - self._press_start).manhattanLength()
+            if dist < 6:
+                # Direct click on sphere toggles ambient voice
+                self.toggle_voice_record()
+        self.old_pos = None
+        self._press_start = None
 
-        # Close Button (✕)
-        self.close_btn = QPushButton("✕", self)
-        self.close_btn.setFixedSize(22, 22)
-        self.close_btn.setToolTip("Exit Application")
-        self.close_btn.setStyleSheet("""
-            QPushButton {
-                background: rgba(30, 41, 59, 0.7);
-                border: 1px solid rgba(148, 163, 184, 0.25);
-                border-radius: 11px;
-                color: #E2E8F0;
-                font-size: 10px;
-                font-weight: 700;
-            }
-            QPushButton:hover {
-                background: rgba(239, 68, 68, 0.65);
-                border: 1px solid #EF4444;
-                color: white;
-            }
-        """)
-        self.close_btn.clicked.connect(QApplication.instance().quit)
-        top_bar.addWidget(self.close_btn)
-
-        card_layout.addLayout(top_bar)
-
-        # (B) Speech Bubble / Status Caption
-        self.speech_lbl = QLabel("Nyaa~! Type or click and I'll code with you! ✨", self)
-        self.speech_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.speech_lbl.setWordWrap(True)
-        self.speech_lbl.setStyleSheet("""
-            QLabel {
-                color: #F8FAFC; 
-                font-weight: 700; 
-                font-size: 11px;
-                background: rgba(22, 27, 34, 0.88);
-                border: 1px solid rgba(56, 189, 248, 0.25);
-                border-radius: 10px;
-                padding: 4px 8px;
-            }
-        """)
-        card_layout.addWidget(self.speech_lbl)
-
-        # (C) ONLY ONE CHAT BOX (Unified Minimalist Bar: Input + Mic + Send)
-        input_container = QFrame(self)
-        input_container.setStyleSheet("""
-            QFrame {
+    def contextMenuEvent(self, event):
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
                 background: rgba(15, 23, 42, 0.95);
-                border: 1.5px solid rgba(148, 163, 184, 0.25);
-                border-radius: 14px;
-            }
-            QFrame:focus-within {
-                border: 1.5px solid #38BDF8;
-                background: rgba(15, 23, 42, 0.98);
-            }
-        """)
-        input_layout = QHBoxLayout(input_container)
-        input_layout.setContentsMargins(10, 3, 6, 3)
-        input_layout.setSpacing(6)
-
-        # Single Chat Box Input Field
-        self.input_field = HistoryLineEdit(self)
-        self.input_field.set_history(self.spell_manager.get_history())
-        self.input_field.setPlaceholderText("Ask Kitty or type command... (Enter) 💬")
-        self.input_field.setStyleSheet("""
-            QLineEdit {
-                background: transparent;
-                border: none;
-                font-size: 11px;
                 color: #F8FAFC;
-                padding: 4px 0px;
+                border: 1px solid rgba(56, 189, 248, 0.4);
+                border-radius: 8px;
+                padding: 4px;
             }
-        """)
-        self.input_field.returnPressed.connect(self.start_ai_task)
-        self.input_field.escapePressed.connect(self.hide)
-        input_layout.addWidget(self.input_field)
-
-        # Inline Microphone Voice Button (🎙️)
-        self.mic_btn = QPushButton("🎙️", self)
-        self.mic_btn.setFixedSize(26, 26)
-        self.mic_btn.setToolTip("Voice Command (Speak to Kitty)")
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                font-size: 13px;
-                color: #94A3B8;
-                border-radius: 13px;
-            }
-            QPushButton:hover {
-                background: rgba(56, 189, 248, 0.2);
-                color: #38BDF8;
-            }
-        """)
-        self.mic_btn.clicked.connect(self.toggle_voice_record)
-        input_layout.addWidget(self.mic_btn)
-
-        # Inline Send Button (➤)
-        self.send_btn = QPushButton("➤", self)
-        self.send_btn.setFixedSize(26, 26)
-        self.send_btn.setToolTip("Send Prompt (Enter)")
-        self.send_btn.setStyleSheet("""
-            QPushButton {
+            QMenu::item:selected {
                 background: #0284C7;
-                border: none;
-                font-size: 11px;
-                font-weight: 700;
-                color: white;
-                border-radius: 13px;
-            }
-            QPushButton:hover {
-                background: #38BDF8;
-            }
-            QPushButton:pressed {
-                background: #0369A1;
+                border-radius: 4px;
             }
         """)
-        self.send_btn.clicked.connect(self.start_ai_task)
-        input_layout.addWidget(self.send_btn)
+        voice_action = menu.addAction("🎙️ Voice Command (Alt+C / Ctrl+Space)")
+        voice_action.triggered.connect(self.toggle_voice_record)
 
-        card_layout.addWidget(input_container)
-        main_layout.addWidget(self.card_frame)
+        privacy_action = menu.addAction("🙈 Privacy Mode")
+        privacy_action.triggered.connect(self.toggle_privacy_mode)
 
-    # --- Real-Time Typing & Clicking Synchronization ---
-    def on_user_key_press(self, key_name):
-        if not self.isVisible() or self.is_looking_away:
-            return
-        safe_key = str(key_name).replace("'", "").replace('"', '')
-        self.web_view.page().runJavaScript(f"if (window.onUserKeyPress) window.onUserKeyPress('{safe_key}');")
-
-    def on_user_mouse_click(self, button='left'):
-        if not self.isVisible() or self.is_looking_away:
-            return
-        self.web_view.page().runJavaScript(f"if (window.onUserMouseClick) window.onUserMouseClick('{button}');")
+        menu.addSeparator()
+        exit_action = menu.addAction("✕ Close Remorus")
+        exit_action.triggered.connect(QApplication.instance().quit)
+        menu.exec(event.globalPos())
 
     def on_web_title_changed(self, title):
-        if title.startswith("slime_pet:") or title.startswith("cat_pet:"):
-            parts = title.split(":", 2)
-            msg = parts[2] if len(parts) > 2 else "..."
-            raphael_lines = [
-                f"{msg} Notice: Optimization affirmed, Master. ✨",
-                f"{msg} Report: Slime density optimal. Affection acknowledged. 💕",
-                f"{msg} Notice: Master's touch registered. Systems harmonized. ✨",
-                f"{msg} Report: Devotion index at maximum. ✨",
-                f"{msg} Notice: Squish elasticity operating within ideal parameters. ✨"
-            ]
-            self.speech_lbl.setText(random.choice(raphael_lines))
-            self.reset_timer.start(4500)
+        if title == "remorus_trigger:mic":
+            self.toggle_voice_record()
 
     def init_tray(self):
         self.tray = QSystemTrayIcon(self)
         self.tray.setIcon(self.style().standardIcon(QApplication.style().StandardPixmap.SP_ComputerIcon))
-        self.tray.setToolTip("Rimuru Slime & Raphael AI Companion ✨ (Alt+C / Ctrl+Space)")
+        self.tray.setToolTip("Remorus AI — Minimalist Floating Companion (Alt+C / Ctrl+Space)")
 
         tray_menu = QMenu()
         tray_menu.setStyleSheet("""
@@ -1100,19 +959,18 @@ class CuteBlobWidget(QWidget):
                 border-radius: 4px;
             }
         """)
-        toggle_action = tray_menu.addAction("Toggle Rimuru Slime (Alt+C / Ctrl+Space)")
+        toggle_action = tray_menu.addAction("Toggle Remorus (Alt+C / Ctrl+Space)")
         toggle_action.triggered.connect(self.toggle_visibility)
 
         voice_action = tray_menu.addAction("🎙️ Voice Command")
         voice_action.triggered.connect(self.toggle_voice_record)
 
-        privacy_action = tray_menu.addAction("🙈 Look Away / Privacy Mode")
+        privacy_action = tray_menu.addAction("🙈 Privacy Mode")
         privacy_action.triggered.connect(self.toggle_privacy_mode)
 
         tray_menu.addSeparator()
-        exit_action = tray_menu.addAction("Exit Rimuru AI")
+        exit_action = tray_menu.addAction("Exit Remorus AI")
         exit_action.triggered.connect(QApplication.instance().quit)
-
 
         self.tray.setContextMenu(tray_menu)
         self.tray.show()
@@ -1126,35 +984,16 @@ class CuteBlobWidget(QWidget):
             self.showNormal()
             self.raise_()
             self.activateWindow()
-            self.input_field.setFocus()
-            self.web_view.page().runJavaScript("if (window.petCat) window.petCat(0.9);")
 
-    # --- 3D Desktop Mouse & Click Tracking ---
+    # --- Mouse & Window Monitoring ---
     def track_desktop_mouse(self):
         if not self.isVisible() or self.is_looking_away:
             return
 
-        # 1. Zero-latency physical mouse click detection fallback
-        try:
-            user32 = ctypes.windll.user32
-            lmb_down = bool(user32.GetAsyncKeyState(0x01) & 0x8000)
-            rmb_down = bool(user32.GetAsyncKeyState(0x02) & 0x8000)
-
-            if lmb_down and not self._prev_lmb:
-                self.on_user_mouse_click('left')
-            elif rmb_down and not self._prev_rmb:
-                self.on_user_mouse_click('right')
-
-            self._prev_lmb = lmb_down
-            self._prev_rmb = rmb_down
-        except Exception:
-            pass
-
-        # 2. Smooth 3D Gaze & Head Tilt tracking
         cursor_pos = QCursor.pos()
-        head_center = self.mapToGlobal(QPoint(self.width() // 2, 95))
-        dx = cursor_pos.x() - head_center.x()
-        dy = cursor_pos.y() - head_center.y()
+        center = self.mapToGlobal(QPoint(self.width() // 2, self.height() // 2))
+        dx = cursor_pos.x() - center.x()
+        dy = cursor_pos.y() - center.y()
 
         screen = QApplication.primaryScreen()
         if screen:
@@ -1164,7 +1003,16 @@ class CuteBlobWidget(QWidget):
             norm_y = max(-1.5, min(1.5, -dy / sh))
             self.web_view.page().runJavaScript(f"if (window.setMousePos) window.setMousePos({norm_x:.2f}, {norm_y:.2f});")
 
-    # --- Windows Active Window Password Privacy Monitor ---
+    def on_user_key_press(self, key_name):
+        if not self.isVisible() or self.is_looking_away:
+            return
+        self.web_view.page().runJavaScript("if (window.onUserKeyPress) window.onUserKeyPress();")
+
+    def on_user_mouse_click(self, button='left'):
+        if not self.isVisible() or self.is_looking_away:
+            return
+        self.web_view.page().runJavaScript("if (window.onUserMouseClick) window.onUserMouseClick();")
+
     def check_password_window(self):
         try:
             hwnd = ctypes.windll.user32.GetForegroundWindow()
@@ -1178,8 +1026,6 @@ class CuteBlobWidget(QWidget):
                 "master key", "private key", "secret", "vault"
             ]
             is_sensitive = any(k in title for k in sensitive_keywords)
-
-            # Auto trigger lookaway when sensitive window is active
             if is_sensitive and not self.is_looking_away:
                 self.set_privacy_mode(True, auto_detected=True)
             elif not is_sensitive and self.is_looking_away and hasattr(self, '_auto_privacy') and self._auto_privacy:
@@ -1196,13 +1042,11 @@ class CuteBlobWidget(QWidget):
         self._auto_privacy = auto_detected
 
         if self.is_looking_away:
-            self.web_view.page().runJavaScript("if (window.setLookAway) window.setLookAway(true);")
-            self.speech_lbl.setText("Password detected! Covering eyes! 🙈" if auto_detected else "I'm not looking! 🙈")
+            self.set_emotion("lookaway")
+            self.update_status("Privacy Active 🙈")
         else:
-            self.web_view.page().runJavaScript("if (window.setLookAway) window.setLookAway(false);")
             self.set_idle()
 
-    # --- 3D Emotion & Physics Synchronization ---
     def set_emotion(self, emotion):
         self.emotion = emotion
         self.web_view.page().runJavaScript(f"if (window.setEmotion) window.setEmotion('{emotion}');")
@@ -1210,138 +1054,76 @@ class CuteBlobWidget(QWidget):
     def set_idle(self):
         if not self.is_looking_away:
             self.set_emotion("idle")
-            self.speech_lbl.setText("I'm ready! ✨")
 
-    # --- Newton's Laws of Motion: Inertia & Elastic Spring Dragging ---
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.old_pos = event.globalPosition().toPoint()
-            self.last_move_time = time.time()
-            self.web_view.page().runJavaScript("if (window.triggerPoke) window.triggerPoke();")
-
-    def mouseMoveEvent(self, event):
-        current_pos = event.globalPosition().toPoint()
-        current_time = time.time()
-
-        if self.old_pos and self.last_move_time:
-            dt = max(0.001, current_time - self.last_move_time)
-            delta = current_pos - self.old_pos
-            vx = (delta.x() / dt) / 80.0
-            vy = (delta.y() / dt) / 80.0
-            self.move(self.x() + delta.x(), self.y() + delta.y())
-            self.web_view.page().runJavaScript(f"if (window.onWindowMove) window.onWindowMove({vx:.2f}, {vy:.2f});")
-
-        self.old_pos = current_pos
-        self.last_move_time = current_time
-
-    def mouseReleaseEvent(self, event):
-        self.old_pos = None
-        self.last_move_time = None
-        self.web_view.page().runJavaScript("if (window.onWindowStop) window.onWindowStop();")
-
-    # --- Voice-to-Chat (Microphone) ---
+    # --- Ambient Voice-to-Chat ---
     def toggle_voice_record(self):
         if self.is_recording:
             if self.voice_worker:
                 self.voice_worker.cancel()
-            self.reset_mic_button()
+            self.is_recording = False
+            self.set_emotion("idle")
+            self.update_status("Standby")
             return
 
         self.is_recording = True
-        self.mic_btn.setText("🔴")
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background: #DC2626;
-                border: 2px solid #EF4444;
-                border-radius: 13px;
-                font-size: 13px;
-                color: white;
-            }
-        """)
-        self.set_emotion("thinking")
-        self.speech_lbl.setText("Listening... 🎙️")
+        self.set_emotion("listening")
+        self.update_status("Listening... 🎙️", "listening")
 
         self.voice_worker = VoiceWorker(duration=4)
-        self.voice_worker.status_update.connect(self.on_voice_status)
+        self.voice_worker.status_update.connect(lambda msg: self.update_status(msg, "listening"))
         self.voice_worker.text_ready.connect(self.on_voice_success)
         self.voice_worker.error.connect(self.on_voice_error)
         self.voice_worker.start()
 
-    def on_voice_status(self, msg):
-        self.speech_lbl.setText(msg)
-
     def on_voice_success(self, recognized_text):
-        self.reset_mic_button()
-        self.input_field.setText(recognized_text)
-        self.speech_lbl.setText(f'Heard: "{recognized_text}"')
-        QTimer.singleShot(400, self.start_ai_task)
+        self.is_recording = False
+        self.update_status(f'"{recognized_text}"')
+        QTimer.singleShot(250, lambda: self.start_ai_task_with_text(recognized_text))
 
     def on_voice_error(self, err_msg):
-        self.reset_mic_button()
-        self.set_emotion("scared")
-        self.speech_lbl.setText(err_msg)
-        self.reset_timer.start(3500)
-
-    def reset_mic_button(self):
         self.is_recording = False
-        self.mic_btn.setText("🎙️")
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                border: none;
-                font-size: 13px;
-                color: #94A3B8;
-                border-radius: 13px;
-            }
-            QPushButton:hover {
-                background: rgba(56, 189, 248, 0.2);
-                color: #38BDF8;
-            }
-        """)
+        self.set_emotion("idle")
+        self.update_status("Didn't catch that!")
+        self.reset_timer.start(3000)
 
-    # --- AI Processing & Context Emotion Dispatcher ---
-    def start_ai_task(self):
-        raw_text = self.input_field.text().strip()
-        if not raw_text:
+    # --- AI Processing & Multi-Model Routing ---
+    def start_ai_task_with_text(self, raw_text: str):
+        clean = raw_text.strip()
+        if not clean:
+            self.set_idle()
             return
 
-        self.input_field.clear()
-        self.input_field.add_to_history(raw_text)
-        self.spell_manager.add_history(raw_text)
+        self.spell_manager.add_history(clean)
 
-        # 1. Check Natural Language Sentiment & Prompt Emotions (Instant 0ms Emoting)
-        prompt_emotion = classify_prompt_emotion(raw_text)
+        # 1. Prompt Emotion & Context Classifier
+        prompt_emotion = classify_prompt_emotion(clean)
         if prompt_emotion:
             self.on_ai_success(prompt_emotion, learned_from_raw=None)
             return
 
-        # 2. Check Spell Cache & Rules for INSTANT 0ms app launches & commands
-        cached_result = self.spell_manager.lookup(raw_text)
-        if cached_result:
-            self.on_ai_success(cached_result, learned_from_raw=None)
+        # 2. Spell Cache Lookup
+        cached = self.spell_manager.lookup(clean)
+        if cached:
+            self.on_ai_success(cached, learned_from_raw=None)
             return
 
-        # 3. Cache miss -> Dispatch to Dynamic Multi-Model Auto-Router
+        # 3. Dynamic Multi-Model Auto-Router
         self.set_emotion("thinking")
-        self.speech_lbl.setText("Routing AI... 💭")
+        self.update_status("Routing AI... 💭", "thinking")
 
-        self.worker = AIWorker(raw_text)
+        self.worker = AIWorker(clean)
         self.worker.model_routed.connect(self.on_model_routed)
-        self.worker.finished.connect(lambda data, q=raw_text: self.on_ai_success(data, learned_from_raw=q))
+        self.worker.finished.connect(lambda data, q=clean: self.on_ai_success(data, learned_from_raw=q))
         self.worker.error.connect(self.on_ai_error)
         self.worker.start()
 
     def on_model_routed(self, model, tier, label):
         if tier == "heavy":
-            self.speech_lbl.setText(f"{label}... 💻")
-            self.set_emotion("typing")
+            self.update_status(f"{label} thinking... 💻", "thinking")
         elif tier == "fast":
-            self.speech_lbl.setText(f"{label}... ⚡")
-            self.set_emotion("happy")
+            self.update_status(f"{label} ⚡", "thinking")
         else:
-            self.speech_lbl.setText(f"{label}... 💭")
-            self.set_emotion("thinking")
-
+            self.update_status("Thinking... 💭", "thinking")
 
     def on_ai_success(self, data, learned_from_raw=None):
         if learned_from_raw:
@@ -1353,13 +1135,9 @@ class CuteBlobWidget(QWidget):
         speech = data.get("speech", "Done!")
 
         self.set_emotion(emotion)
-        self.speech_lbl.setText(speech)
+        self.update_status(speech)
 
-        # Play celebration / pet bounce if applicable
-        if data.get("pet_effect", False):
-            self.web_view.page().runJavaScript("if (window.petCat) window.petCat(1.1);")
-
-        # Speak back with cute TTS voice
+        # Speak back with neural voice AI
         if speech:
             self.tts = TTSWorker(speech)
             self.tts.start()
@@ -1397,24 +1175,23 @@ class CuteBlobWidget(QWidget):
 
         elif action == "type_text":
             self.pending_payload = payload
-            self.speech_lbl.setText("Click text box now! (2s)")
+            self.update_status("Click text box now (2s)")
             QTimer.singleShot(2000, self.execute_typing)
 
-        else:  # Chat / Response / Celebrate
-            self.speech_lbl.setText(payload[:45] if payload else speech)
-            self.reset_timer.start(6000)
+        else:
+            self.reset_timer.start(5000)
 
     def execute_typing(self):
         pyperclip.copy(self.pending_payload)
         pyautogui.hotkey('ctrl', 'v')
         self.set_emotion("typing")
-        self.speech_lbl.setText("Finished writing! ✍️")
+        self.update_status("Finished writing! ✍️")
         self.reset_timer.start(3500)
 
     def on_ai_error(self, err_msg):
-        self.set_emotion("scared")
-        self.speech_lbl.setText("Oops, error!")
-        self.reset_timer.start(4000)
+        self.set_emotion("idle")
+        self.update_status("Error processing")
+        self.reset_timer.start(3500)
 
     def closeEvent(self, event):
         if hasattr(self, 'hotkey_mgr'):
@@ -1424,23 +1201,22 @@ class CuteBlobWidget(QWidget):
         super().closeEvent(event)
 
 
-if __name__ == "__main__":
-    print("Starting Rimuru Tempest & Great Sage Raphael AI...", flush=True)
-    app = QApplication(sys.argv)
+# Backward compatibility alias
+CuteBlobWidget = RemorusWidget
 
+
+if __name__ == "__main__":
+    print("Starting Remorus AI Minimalist Floating Sphere...", flush=True)
+    app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(False)
-    print("QApplication created...", flush=True)
-    blob = CuteBlobWidget()
-    print("CuteBlobWidget created...", flush=True)
+    blob = RemorusWidget()
 
     # Position in bottom-right corner of screen (above taskbar)
     screen_geo = app.primaryScreen().availableGeometry()
-    blob.move(screen_geo.width() - 315, screen_geo.height() - 400)
+    blob.move(screen_geo.width() - 250, screen_geo.height() - 280)
 
     blob.show()
     blob.raise_()
     blob.activateWindow()
-    print("Entering event loop...", flush=True)
     ret = app.exec()
-    print(f"Event loop exited with code: {ret}", flush=True)
     sys.exit(ret)

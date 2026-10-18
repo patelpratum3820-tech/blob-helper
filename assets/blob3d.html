@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Rimuru Tempest (Slime) & Great Sage Raphael AI Companion</title>
+  <title>Remorus AI — Minimalist Floating Jelly Sphere</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body {
@@ -20,62 +20,70 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      cursor: grab;
+      cursor: pointer;
       position: relative;
-    }
-    #canvas-container:active {
-      cursor: grabbing;
     }
     canvas {
       display: block;
       outline: none;
     }
-    /* Raphael Status Badge */
-    .slime-badge {
+    /* Minimalist Floating HUD Pill for Remorus Status */
+    .remorus-pill {
       position: absolute;
-      top: 10px;
-      font-weight: 700;
-      font-size: 11.5px;
-      letter-spacing: 0.3px;
-      padding: 4px 12px;
-      border-radius: 12px;
-      background: rgba(15, 23, 42, 0.90);
+      bottom: 6px;
+      font-weight: 600;
+      font-size: 10.5px;
+      letter-spacing: 0.5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      background: rgba(10, 15, 29, 0.85);
       color: #38bdf8;
-      border: 1.5px solid rgba(56, 189, 248, 0.5);
-      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
       pointer-events: none;
-      transform: translateY(0) scale(0.9);
       opacity: 0;
-      transition: transform 0.35s cubic-bezier(0.18, 0.89, 0.32, 1.28), opacity 0.35s ease;
+      transform: translateY(4px) scale(0.95);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       z-index: 10;
+      white-space: nowrap;
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .slime-badge.show {
-      transform: translateY(-4px) scale(1.05);
+    .remorus-pill.visible {
       opacity: 1;
+      transform: translateY(0) scale(1);
     }
-    .slime-badge.gold {
+    .remorus-pill.listening {
+      color: #00f5ff;
+      border-color: rgba(0, 245, 255, 0.7);
+      box-shadow: 0 0 16px rgba(0, 245, 255, 0.35);
+    }
+    .remorus-pill.thinking {
       color: #fbbf24;
-      border-color: rgba(251, 191, 36, 0.6);
-      box-shadow: 0 4px 20px rgba(245, 158, 11, 0.35);
+      border-color: rgba(251, 191, 36, 0.7);
+      box-shadow: 0 0 16px rgba(251, 191, 36, 0.35);
     }
   </style>
   <script src="three.min.js"></script>
 </head>
 <body>
   <div id="canvas-container">
-    <div id="slime-badge" class="slime-badge">Notice: Systems Optimal ✨</div>
+    <div id="remorus-pill" class="remorus-pill">Remorus Active</div>
   </div>
 
   <script>
     // =========================================================================
-    // 1. 3D SCENE & RENDERER SETUP
+    // 1. SCENE & HIGH-PERFORMANCE RENDERER
     // =========================================================================
     const container = document.getElementById('canvas-container');
-    const slimeBadge = document.getElementById('slime-badge');
+    const remorusPill = document.getElementById('remorus-pill');
     const scene = new THREE.Scene();
 
-    const camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 100);
-    camera.position.set(0, 0.05, 5.8);
+    const camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 0, 5.2);
 
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
@@ -85,513 +93,276 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.25;
+    renderer.toneMappingExposure = 1.35;
     container.appendChild(renderer.domElement);
 
     // =========================================================================
-    // 2. LIGHTING SETUP (Soft rim & vibrant highlights for translucent jelly)
+    // 2. STUDIO REFRACTION LIGHTING
     // =========================================================================
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.15);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
     scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.7);
-    keyLight.position.set(4, 5, 5);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+    keyLight.position.set(4, 5, 4);
     scene.add(keyLight);
 
-    const rimLight = new THREE.DirectionalLight(0x38bdf8, 2.0);
-    rimLight.position.set(-5, 4, -4);
-    scene.add(rimLight);
+    const cyanRim = new THREE.DirectionalLight(0x38bdf8, 2.2);
+    cyanRim.position.set(-4, 3, -4);
+    scene.add(cyanRim);
 
-    const bottomGlow = new THREE.PointLight(0x0284c7, 1.2, 8);
-    bottomGlow.position.set(0, -2.5, 2);
-    scene.add(bottomGlow);
-
-    // =========================================================================
-    // 3. RIMURU SLIME HIERARCHY
-    // =========================================================================
-    const slimeRoot = new THREE.Group();
-    slimeRoot.position.y = -0.25;
-    scene.add(slimeRoot);
-
-    const slimeJiggleGroup = new THREE.Group();
-    slimeRoot.add(slimeJiggleGroup);
+    const violetRim = new THREE.DirectionalLight(0x818cf8, 1.5);
+    violetRim.position.set(3, -4, -3);
+    scene.add(violetRim);
 
     // =========================================================================
-    // 4. RIMURU TRANSLUCENT SLIME MATERIAL (MeshPhysicalMaterial)
+    // 3. REMORUS FLOATING HIERARCHY (NO GRAVITY - ZERO BOUNCE)
     // =========================================================================
-    // Iconic Rimuru Sky-Blue color palette
-    const SLIME_COLOR_IDLE = 0x48cae4;      // #48cae4 - Sky-Blue
-    const SLIME_COLOR_RAPHAEL = 0x00b4d8;   // #00b4d8 - Deep Wisdom Blue
-    const SLIME_COLOR_HAPPY = 0x38bdf8;
-    const SLIME_COLOR_ANGRY = 0xf87171;
-    const SLIME_COLOR_LOVE = 0xf472b6;
+    const remorusRoot = new THREE.Group();
+    scene.add(remorusRoot);
 
-    const slimeMat = new THREE.MeshPhysicalMaterial({
-      color: SLIME_COLOR_IDLE,
-      roughness: 0.08,
+    // =========================================================================
+    // 4. PRISTINE TRANSLUCENT GLASS JELLY MATERIAL
+    // =========================================================================
+    // Clean, smooth, refractive glass jelly without cartoon eyes or mouth
+    const jellyMaterial = new THREE.MeshPhysicalMaterial({
+      color: 0x38bdf8,
+      roughness: 0.04,
       metalness: 0.02,
-      transmission: 0.86,         // Jelly-glass transmission
-      ior: 1.333,                 // Water / gelatin refraction
+      transmission: 0.92,       // Optical glass transmission
+      ior: 1.40,                // High refractive glass-jelly index
       transparent: true,
-      opacity: 0.94,
-      reflectivity: 0.65,
-      clearcoat: 0.90,
-      clearcoatRoughness: 0.08,
+      opacity: 0.95,
+      reflectivity: 0.85,
+      clearcoat: 1.0,
+      clearcoatRoughness: 0.05,
       depthWrite: false
     });
 
-    // Outer subtle fresnel rim
-    const outerGlowMat = new THREE.MeshBasicMaterial({
+    // Outer subtle chromatic halo
+    const haloMaterial = new THREE.MeshBasicMaterial({
       color: 0x7dd3fc,
       transparent: true,
-      opacity: 0.15,
+      opacity: 0.14,
       blending: THREE.AdditiveBlending,
       side: THREE.BackSide
     });
 
-    // =========================================================================
-    // 5. TEARDROP / DROPLET PROCEDURAL SLIME GEOMETRY
-    // =========================================================================
-    const BASE_RADIUS = 1.35;
-    const slimeGeo = new THREE.SphereGeometry(BASE_RADIUS, 48, 36);
-    
-    // Deform base sphere into Rimuru's iconic chubby droplet teardrop
-    const posAttr = slimeGeo.attributes.position;
-    const originalPositions = new Float32Array(posAttr.array);
+    // Pristine Sphere Geometry (No cartoon features, smooth elegant geometry)
+    const SPHERE_RADIUS = 1.42;
+    const sphereGeo = new THREE.SphereGeometry(SPHERE_RADIUS, 64, 48);
+    const jellySphere = new THREE.Mesh(sphereGeo, jellyMaterial);
+    remorusRoot.add(jellySphere);
 
-    for (let i = 0; i < posAttr.count; i++) {
-      let x = posAttr.getX(i);
-      let y = posAttr.getY(i);
-      let z = posAttr.getZ(i);
-
-      // 1. Flatten bottom slightly and widen base
-      if (y < 0) {
-        let bottomFactor = 1.0 - (y / BASE_RADIUS);
-        x *= 1.0 + (bottomFactor * 0.16);
-        z *= 1.0 + (bottomFactor * 0.16);
-        y *= 0.88; // subtle squash at resting table
-      } else {
-        // 2. Taper towards cute rounded teardrop dome at top
-        let topFactor = (y / BASE_RADIUS);
-        x *= 1.0 - (topFactor * 0.22);
-        z *= 1.0 - (topFactor * 0.22);
-        y *= 1.06; // slight cute teardrop height elongation
-      }
-
-      posAttr.setXYZ(i, x, y, z);
-    }
-    slimeGeo.computeVertexNormals();
-
-    const slimeMesh = new THREE.Mesh(slimeGeo, slimeMat);
-    slimeJiggleGroup.add(slimeMesh);
-
-    // Subtle outer halo rim
-    const haloMesh = new THREE.Mesh(slimeGeo.clone(), outerGlowMat);
-    haloMesh.scale.set(1.03, 1.03, 1.03);
-    slimeJiggleGroup.add(haloMesh);
+    const haloMesh = new THREE.Mesh(sphereGeo.clone(), haloMaterial);
+    haloMesh.scale.set(1.035, 1.035, 1.035);
+    remorusRoot.add(haloMesh);
 
     // =========================================================================
-    // 6. GREAT SAGE / RAPHAEL INNER WISDOM CORE
+    // 5. INNER REMORUS NEURAL ENERGY CORE (Bioluminescent Pulse)
     // =========================================================================
-    // Inner glowing core representing Great Sage / Raphael calculating
-    const coreGeo = new THREE.SphereGeometry(0.55, 24, 20);
-    const coreMat = new THREE.MeshBasicMaterial({
-      color: 0x38bdf8,
+    const coreGeo = new THREE.SphereGeometry(0.56, 32, 28);
+    const coreMaterial = new THREE.MeshBasicMaterial({
+      color: 0x0284c7,
       transparent: true,
-      opacity: 0.65,
+      opacity: 0.75,
       blending: THREE.AdditiveBlending
     });
-    const coreMesh = new THREE.Mesh(coreGeo, coreMat);
-    coreMesh.position.set(0, 0.05, 0);
-    slimeJiggleGroup.add(coreMesh);
+    const coreMesh = new THREE.Mesh(coreGeo, coreMaterial);
+    remorusRoot.add(coreMesh);
 
-    // Raphael Point Light that illuminates translucent slime from inside
-    const coreLight = new THREE.PointLight(0x38bdf8, 1.8, 4.5);
+    // Inner bioluminescent light
+    const coreLight = new THREE.PointLight(0x38bdf8, 2.2, 5.0);
     coreMesh.add(coreLight);
 
-    // Raphael Magic Circle Ring (activates when calculating)
-    const ringGeo = new THREE.RingGeometry(0.75, 0.82, 32);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xfbbf24,
+    // Dual Energy Rings (Subtle orbiting orbital bands around the core)
+    const ringGeo1 = new THREE.RingGeometry(0.78, 0.82, 48);
+    const ringMat1 = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
       transparent: true,
-      opacity: 0.0,
+      opacity: 0.45,
       side: THREE.DoubleSide,
       blending: THREE.AdditiveBlending
     });
-    const raphaelRing = new THREE.Mesh(ringGeo, ringMat);
-    raphaelRing.position.set(0, 0.05, 0);
-    raphaelRing.rotation.x = Math.PI / 2.3;
-    slimeJiggleGroup.add(raphaelRing);
+    const ring1 = new THREE.Mesh(ringGeo1, ringMat1);
+    ring1.rotation.x = Math.PI / 3;
+    remorusRoot.add(ring1);
 
-    // =========================================================================
-    // 7. RIMURU SLIME EYES (Stylized Curved Lines - No Humanoid Pupils!)
-    // =========================================================================
-    // In Tensura, Rimuru's slime eyes are clean, expressive curved dark lines:
-    // ( - - ) relaxed slit crescents
-    // ( ^ ^ ) happy arched crescents
-    // ( ━ ━ ) Raphael calculating glowing lines
-    // ( > < ) privacy / embarrassed
-    const eyeGroup = new THREE.Group();
-    eyeGroup.position.set(0, 0.08, 1.28);
-    slimeJiggleGroup.add(eyeGroup);
-
-    const eyeLineMat = new THREE.MeshBasicMaterial({
-      color: 0x0f172a, // Deep anime ink line
-      side: THREE.DoubleSide
-    });
-
-    const raphaelEyeGlowMat = new THREE.MeshBasicMaterial({
-      color: 0xfbbf24, // Golden Raphael eye glow
+    const ringGeo2 = new THREE.RingGeometry(0.92, 0.95, 48);
+    const ringMat2 = new THREE.MeshBasicMaterial({
+      color: 0x818cf8,
       transparent: true,
-      opacity: 0.0,
-      side: THREE.DoubleSide
+      opacity: 0.35,
+      side: THREE.DoubleSide,
+      blending: THREE.AdditiveBlending
     });
-
-    // Helper to generate a curved ribbon curve
-    function createSlimeEyeCurve(isLeft = true) {
-      const group = new THREE.Group();
-      
-      // Arc curve geometry
-      const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(-0.24, 0, 0),
-        new THREE.Vector3(0, 0.09, 0.03),
-        new THREE.Vector3(0.24, 0, 0)
-      );
-      const tubeGeo = new THREE.TubeGeometry(curve, 16, 0.038, 8, false);
-      const tubeMesh = new THREE.Mesh(tubeGeo, eyeLineMat);
-      group.add(tubeMesh);
-
-      // Golden Raphael glow overlay tube
-      const glowTube = new THREE.Mesh(tubeGeo, raphaelEyeGlowMat);
-      glowTube.scale.set(1.15, 1.15, 1.15);
-      group.add(glowTube);
-
-      return { root: group, main: tubeMesh, glow: glowTube };
-    }
-
-    const leftEye = createSlimeEyeCurve(true);
-    leftEye.root.position.set(-0.45, 0, 0);
-    eyeGroup.add(leftEye.root);
-
-    const rightEye = createSlimeEyeCurve(false);
-    rightEye.root.position.set(0.45, 0, 0);
-    eyeGroup.add(rightEye.root);
-
-    // Cute Soft Pink Cheek Blush Pads (Visible on Happy / Love)
-    const blushGeo = new THREE.PlaneGeometry(0.32, 0.16);
-    const blushMat = new THREE.MeshBasicMaterial({
-      color: 0xf472b6,
-      transparent: true,
-      opacity: 0.0,
-      side: THREE.DoubleSide
-    });
-
-    const leftBlush = new THREE.Mesh(blushGeo, blushMat);
-    leftBlush.position.set(-0.70, -0.16, 1.15);
-    leftBlush.rotation.y = 0.35;
-    slimeJiggleGroup.add(leftBlush);
-
-    const rightBlush = new THREE.Mesh(blushGeo, blushMat);
-    rightBlush.position.set(0.70, -0.16, 1.15);
-    rightBlush.rotation.y = -0.35;
-    slimeJiggleGroup.add(rightBlush);
+    const ring2 = new THREE.Mesh(ringGeo2, ringMat2);
+    ring2.rotation.y = Math.PI / 4;
+    remorusRoot.add(ring2);
 
     // =========================================================================
-    // 8. REAL-TIME JELLY PHYSICS & JIGGLE STATE
+    // 6. STATE & AMBIENT LEVITATION (WEIGHTLESS - ZERO GRAVITY)
     // =========================================================================
-    let currentEmotion = "idle";
-    let targetSlimeColor = new THREE.Color(SLIME_COLOR_IDLE);
-    let targetCoreColor = new THREE.Color(0x38bdf8);
-    let targetCoreIntensity = 1.6;
-    let targetBlushOpacity = 0.0;
-    let targetRingOpacity = 0.0;
-    let targetRaphaelEyeGlow = 0.0;
+    let currentMode = "idle"; // "idle" | "listening" | "thinking" | "speaking"
+    let targetJellyColor = new THREE.Color(0x38bdf8);
+    let targetCoreColor = new THREE.Color(0x0284c7);
+    let targetCoreIntensity = 2.0;
+    let targetCorePulseRate = 2.0;
 
-    // Elastic spring physics for drag inertia and poke
-    let springVelocity = { x: 0, y: 0, z: 0 };
-    let springScale = { x: 1, y: 1, z: 1 };
-    let targetScale = { x: 1, y: 1, z: 1 };
-    let jiggleWobble = 0.0;
-
-    // Mouse tracking gaze
+    // Smooth subtle mouse gaze (Sphere leans gracefully without jumping)
     let targetRotY = 0;
     let targetRotX = 0;
 
-    // Natural Blink Timer
-    let blinkTimer = 0;
-    let isBlinking = false;
-    let blinkScaleY = 1.0;
+    // Window Drag State (Weightless smooth translation - NO gravity spring)
+    window.onWindowMove = function() {
+      // Pure weightless movement
+    };
+    window.onWindowStop = function() {
+      // Zero gravity bounce
+    };
+
+    // Keyboard & Mouse reactivity (subtle ripple pulse)
+    window.onUserKeyPress = function() {
+      // Subtle gentle core energy spark
+      targetCoreIntensity = Math.min(3.5, targetCoreIntensity + 0.1);
+    };
+    window.onUserMouseClick = function() {
+      targetCoreIntensity = Math.min(3.5, targetCoreIntensity + 0.15);
+    };
+
+    // Gaze tracking
+    window.setMousePos = function(normX, normY) {
+      targetRotY = normX * 0.30;
+      targetRotX = normY * 0.25;
+    };
 
     // =========================================================================
-    // 9. EMOTION & RAPHAEL CALCULATION DISPATCHER
+    // 7. REMORUS AI INTERACTION MODES
     // =========================================================================
-    window.setEmotion = function(emotion) {
-      currentEmotion = emotion;
+    window.setEmotion = function(mode) {
+      currentMode = mode;
 
-      // Reset base defaults
-      targetBlushOpacity = 0.0;
-      targetRingOpacity = 0.0;
-      targetRaphaelEyeGlow = 0.0;
-      leftEye.root.rotation.z = 0;
-      rightEye.root.rotation.z = 0;
-
-      switch(emotion) {
-        case "thinking": // Raphael Calculating
-          targetSlimeColor.setHex(SLIME_COLOR_RAPHAEL);
-          targetCoreColor.setHex(0xfbbf24); // Raphael Gold
-          targetCoreIntensity = 3.2;
-          targetRingOpacity = 0.85;
-          targetRaphaelEyeGlow = 1.0;
-          leftEye.root.scale.set(1.0, 0.4, 1.0); // sharp focused calculating lines
-          rightEye.root.scale.set(1.0, 0.4, 1.0);
-          showBadge("Report: Analyzing query... ⚡", true);
+      switch(mode) {
+        case "listening":
+          // Vibrant cyan neon glow when hearing speech
+          targetJellyColor.setHex(0x00f5ff);
+          targetCoreColor.setHex(0x06b6d4);
+          targetCoreIntensity = 3.6;
+          targetCorePulseRate = 6.0;
+          ringMat1.opacity = 0.85;
+          ringMat2.opacity = 0.70;
+          showPill("Listening... 🎙️", "listening");
           break;
 
-        case "happy": // Rimuru Cheerful ( ^ ^ )
-          targetSlimeColor.setHex(SLIME_COLOR_HAPPY);
-          targetCoreColor.setHex(0x38bdf8);
-          targetCoreIntensity = 2.0;
-          targetBlushOpacity = 0.75;
-          leftEye.root.rotation.z = 0.20; // Arched happy ( ^ ^ )
-          rightEye.root.rotation.z = -0.20;
-          leftEye.root.scale.set(1.1, 1.25, 1.0);
-          rightEye.root.scale.set(1.1, 1.25, 1.0);
-          triggerBounce(1.22);
-          showBadge("Affirmative, Master! ✨");
+        case "thinking":
+          // High-energy golden / amber neural processing pulse
+          targetJellyColor.setHex(0x38bdf8);
+          targetCoreColor.setHex(0xfbbf24);
+          targetCoreIntensity = 4.2;
+          targetCorePulseRate = 8.5;
+          ringMat1.opacity = 0.95;
+          ringMat2.opacity = 0.80;
+          showPill("Processing... 💭", "thinking");
           break;
 
-        case "love": // Warm affectionate slime
-          targetSlimeColor.setHex(SLIME_COLOR_LOVE);
-          targetCoreColor.setHex(0xf43f5e);
-          targetCoreIntensity = 2.6;
-          targetBlushOpacity = 0.90;
-          leftEye.root.rotation.z = 0.16;
-          rightEye.root.rotation.z = -0.16;
-          showBadge("Report: Master devotion confirmed 💖");
+        case "speaking":
+        case "happy":
+          // Harmonic azure / violet resonance
+          targetJellyColor.setHex(0x38bdf8);
+          targetCoreColor.setHex(0x6366f1);
+          targetCoreIntensity = 3.0;
+          targetCorePulseRate = 4.0;
+          ringMat1.opacity = 0.65;
+          ringMat2.opacity = 0.55;
           break;
 
-        case "typing": // Raphael Task Execution
-          targetSlimeColor.setHex(SLIME_COLOR_RAPHAEL);
-          targetCoreColor.setHex(0x38bdf8);
-          targetCoreIntensity = 2.5;
-          targetRaphaelEyeGlow = 0.7;
-          leftEye.root.scale.set(1.0, 0.5, 1.0);
-          rightEye.root.scale.set(1.0, 0.5, 1.0);
-          showBadge("Notice: Executing task... 💻");
-          break;
-
-        case "angry":
-          targetSlimeColor.setHex(SLIME_COLOR_ANGRY);
-          targetCoreColor.setHex(0xef4444);
-          targetCoreIntensity = 2.8;
-          leftEye.root.rotation.z = -0.25; // slanted angry lines
-          rightEye.root.rotation.z = 0.25;
-          showBadge("Warning: Optimization required! 💢");
-          break;
-
-        case "lookaway": // Privacy mode
-          targetSlimeColor.setHex(0x64748b);
-          targetCoreColor.setHex(0x334155);
-          targetCoreIntensity = 0.8;
-          leftEye.root.scale.set(1.0, 0.1, 1.0); // closed lines
-          rightEye.root.scale.set(1.0, 0.1, 1.0);
-          showBadge("Notice: Privacy sensor engaged 🙈");
+        case "lookaway":
+          // Muted stealth privacy mode
+          targetJellyColor.setHex(0x475569);
+          targetCoreColor.setHex(0x1e293b);
+          targetCoreIntensity = 0.6;
+          targetCorePulseRate = 1.0;
+          ringMat1.opacity = 0.15;
+          ringMat2.opacity = 0.10;
+          showPill("Privacy Mode 🙈");
           break;
 
         default: // "idle"
-          targetSlimeColor.setHex(SLIME_COLOR_IDLE);
-          targetCoreColor.setHex(0x38bdf8);
-          targetCoreIntensity = 1.6;
-          leftEye.root.scale.set(1.0, 0.8, 1.0);
-          rightEye.root.scale.set(1.0, 0.8, 1.0);
+          targetJellyColor.setHex(0x38bdf8);
+          targetCoreColor.setHex(0x0284c7);
+          targetCoreIntensity = 2.0;
+          targetCorePulseRate = 2.0;
+          ringMat1.opacity = 0.45;
+          ringMat2.opacity = 0.35;
           break;
       }
     };
 
-    function showBadge(text, isGold = false) {
-      slimeBadge.textContent = text;
-      slimeBadge.className = "slime-badge show" + (isGold ? " gold" : "");
-      clearTimeout(slimeBadge._timer);
-      slimeBadge._timer = setTimeout(() => {
-        slimeBadge.classList.remove("show");
+    function showPill(text, type = "") {
+      remorusPill.textContent = text;
+      remorusPill.className = "remorus-pill visible" + (type ? " " + type : "");
+      clearTimeout(remorusPill._timer);
+      remorusPill._timer = setTimeout(() => {
+        remorusPill.classList.remove("visible");
       }, 3500);
     }
 
-    // =========================================================================
-    // 10. INTERACTION APIS (CALLED FROM PYTHON BLOB.PY)
-    // =========================================================================
-    // 1. Mouse Gaze Tracking
-    window.setMousePos = function(normX, normY) {
-      targetRotY = normX * 0.45;
-      targetRotX = normY * 0.35;
-    };
-
-    // 2. Window Drag & Elastic Inertia
-    window.onWindowMove = function(vx, vy) {
-      // Squash and stretch along drag velocity vector
-      springScale.x = Math.max(0.7, Math.min(1.4, 1.0 - (Math.abs(vx) * 0.15)));
-      springScale.y = Math.max(0.7, Math.min(1.4, 1.0 + (Math.abs(vy) * 0.20)));
-      springScale.z = Math.max(0.7, Math.min(1.4, 1.0 - (Math.abs(vx) * 0.12)));
-      jiggleWobble += (Math.abs(vx) + Math.abs(vy)) * 0.4;
-    };
-
-    window.onWindowStop = function() {
-      triggerBounce(1.18);
-    };
-
-    // 3. Elastic Poke / Click on Slime
-    window.triggerPoke = function() {
-      triggerBounce(1.25);
-      showBadge("Notice: Slime squish detected ✨");
-      // Notify python of poke
-      document.title = "slime_pet:squish:Rimuru purrs softly~ 💕";
-    };
-
-    window.petCat = function(factor) {
-      triggerBounce(factor || 1.20);
-      showBadge("Notice: Optimization affirmed ✨");
-    };
-
-    function triggerBounce(factor = 1.2) {
-      springScale.y = factor;
-      springScale.x = 1.0 / Math.sqrt(factor);
-      springScale.z = 1.0 / Math.sqrt(factor);
-      jiggleWobble += 0.8;
-    }
-
-    // 4. Keyboard Typing Reaction (Bongo / Typing Jiggle)
-    let lastKeyTime = 0;
-    window.onUserKeyPress = function(key) {
-      const now = performance.now();
-      if (now - lastKeyTime > 60) {
-        lastKeyTime = now;
-        // Rhythmic vertical slime bounce
-        springScale.y = 0.94;
-        springScale.x = 1.03;
-        springScale.z = 1.03;
-        jiggleWobble += 0.12;
-      }
-    };
-
-    window.onUserMouseClick = function(btn) {
-      springScale.y = 0.92;
-      springScale.x = 1.04;
-      jiggleWobble += 0.18;
-    };
-
-    window.setLookAway = function(state) {
-      if (state) {
-        window.setEmotion("lookaway");
-      } else {
-        window.setEmotion("idle");
-      }
-    };
-
-    // Click on canvas directly
+    // Direct Click to Speak Trigger
     container.addEventListener('pointerdown', (e) => {
-      window.triggerPoke();
+      // Signal Python to toggle voice recording
+      document.title = "remorus_trigger:mic";
     });
 
+    window.triggerPoke = function() {
+      // Subtle energetic shimmer
+      targetCoreIntensity = 3.8;
+    };
+    window.petCat = function() {};
+    window.setLookAway = function(state) {
+      window.setEmotion(state ? "lookaway" : "idle");
+    };
+
     // =========================================================================
-    // 11. 60 FPS ANIMATION LOOP (Physics, Wobble & Shaders)
+    // 8. 60 FPS SERENE AMBIENT LEVITATION LOOP (WEIGHTLESS)
     // =========================================================================
-    let clock = new THREE.Clock();
+    const clock = new THREE.Clock();
 
     function animate() {
       requestAnimationFrame(animate);
       const dt = Math.min(clock.getDelta(), 0.1);
       const time = clock.getElapsedTime();
 
-      // 1. Smooth Color & Material Lerping
-      slimeMat.color.lerp(targetSlimeColor, dt * 5.0);
-      coreMat.color.lerp(targetCoreColor, dt * 6.0);
-      coreLight.color.lerp(targetCoreColor, dt * 6.0);
+      // 1. Smooth Material & Lighting Transitions
+      jellyMaterial.color.lerp(targetJellyColor, dt * 5.0);
+      coreMaterial.color.lerp(targetCoreColor, dt * 5.0);
+      coreLight.color.lerp(targetCoreColor, dt * 5.0);
       coreLight.intensity += (targetCoreIntensity - coreLight.intensity) * dt * 5.0;
-      
-      leftBlush.material.opacity += (targetBlushOpacity - leftBlush.material.opacity) * dt * 6.0;
-      rightBlush.material.opacity = leftBlush.material.opacity;
-      raphaelRing.material.opacity += (targetRingOpacity - raphaelRing.material.opacity) * dt * 5.0;
-      raphaelEyeGlowMat.opacity += (targetRaphaelEyeGlow - raphaelEyeGlowMat.opacity) * dt * 6.0;
 
-      // Rotate Raphael ring when calculating
-      if (raphaelRing.material.opacity > 0.05) {
-        raphaelRing.rotation.z += dt * 1.8;
-      }
+      // 2. Smooth Gaze Rotation
+      remorusRoot.rotation.y += (targetRotY - remorusRoot.rotation.y) * dt * 4.5;
+      remorusRoot.rotation.x += (targetRotX - remorusRoot.rotation.x) * dt * 4.5;
 
-      // 2. Smooth Head / Slime Gaze Tilt
-      slimeRoot.rotation.y += (targetRotY - slimeRoot.rotation.y) * dt * 6.0;
-      slimeRoot.rotation.x += (targetRotX - slimeRoot.rotation.x) * dt * 6.0;
+      // 3. Gentle Pure Weightless Levitation (Zero Gravity, Zero Bounce)
+      remorusRoot.position.y = Math.sin(time * 1.5) * 0.08;
 
-      // 3. Natural Breathing & Organic Jiggle Wobble
-      const breath = Math.sin(time * 2.2) * 0.035;
-      jiggleWobble *= Math.pow(0.12, dt); // decay jiggle wobble
+      // 4. Subtle Ambient Respiration Scale
+      const breathe = 1.0 + Math.sin(time * 2.0) * 0.022;
+      jellySphere.scale.set(breathe, breathe, breathe);
+      haloMesh.scale.set(breathe * 1.035, breathe * 1.035, breathe * 1.035);
 
-      const wobbleX = Math.sin(time * 8.0) * (jiggleWobble * 0.04);
-      const wobbleY = Math.cos(time * 9.0) * (jiggleWobble * 0.05);
+      // 5. Orbital Energy Bands Rotation
+      ring1.rotation.z += dt * 0.6;
+      ring2.rotation.z -= dt * 0.45;
 
-      // Spring physics relaxation towards target scale (1, 1, 1)
-      const springStiffness = 32.0;
-      const springDamping = 6.5;
-
-      const forceX = (targetScale.x - springScale.x) * springStiffness;
-      const forceY = (targetScale.y - springScale.y) * springStiffness;
-      const forceZ = (targetScale.z - springScale.z) * springStiffness;
-
-      springVelocity.x = (springVelocity.x + forceX * dt) * Math.exp(-springDamping * dt);
-      springVelocity.y = (springVelocity.y + forceY * dt) * Math.exp(-springDamping * dt);
-      springVelocity.z = (springVelocity.z + forceZ * dt) * Math.exp(-springDamping * dt);
-
-      springScale.x += springVelocity.x * dt;
-      springScale.y += springVelocity.y * dt;
-      springScale.z += springVelocity.z * dt;
-
-      // Apply combined squash & stretch
-      slimeJiggleGroup.scale.set(
-        springScale.x + breath + wobbleX,
-        springScale.y - (breath * 1.2) + wobbleY,
-        springScale.z + breath + wobbleX
-      );
-
-      // Subtle resting float
-      slimeRoot.position.y = -0.22 + Math.sin(time * 1.8) * 0.04;
-
-      // 4. Natural Slime Blinking
-      blinkTimer += dt;
-      if (!isBlinking && blinkTimer > 3.8 + Math.random() * 2.5) {
-        isBlinking = true;
-        blinkTimer = 0;
-      }
-      if (isBlinking) {
-        blinkScaleY -= dt * 16.0;
-        if (blinkScaleY <= 0.05) {
-          blinkScaleY = 0.05;
-          isBlinking = false;
-        }
-      } else if (blinkScaleY < 1.0 && currentEmotion !== "thinking" && currentEmotion !== "typing" && currentEmotion !== "lookaway") {
-        blinkScaleY += dt * 14.0;
-        if (blinkScaleY > 1.0) blinkScaleY = 1.0;
-      }
-
-      if (currentEmotion === "idle" || currentEmotion === "happy") {
-        leftEye.root.scale.y = blinkScaleY;
-        rightEye.root.scale.y = blinkScaleY;
-      }
-
-      // 5. Raphael Inner Core Pulse
-      if (currentEmotion === "thinking" || currentEmotion === "typing") {
-        const pulse = 1.0 + Math.sin(time * 6.5) * 0.18;
-        coreMesh.scale.set(pulse, pulse, pulse);
-      } else {
-        const pulse = 1.0 + Math.sin(time * 2.0) * 0.06;
-        coreMesh.scale.set(pulse, pulse, pulse);
-      }
+      // 6. Neural Core Harmonic Pulse
+      const corePulse = 1.0 + Math.sin(time * targetCorePulseRate) * 0.12;
+      coreMesh.scale.set(corePulse, corePulse, corePulse);
 
       renderer.render(scene, camera);
     }
 
     animate();
 
-    // Resize handling
+    // Window Resize Handling
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
